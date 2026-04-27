@@ -65,11 +65,15 @@ export default function AdminPage() {
             if (b.status.includes(':')) {
               return b.status.split(':')[1].trim();
             }
+            
+            // FIX: Safely handle classes as either an object or an array to satisfy TypeScript
+            const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+            
             // If it's a standard template time, safely extract it as a string
             // E.g., "2026-05-03 17:45:00" -> "17:45"
-            if (b.classes?.start_time) {
+            if (classItem?.start_time) {
               // Bypassing new Date() to prevent Safari/iOS 'Invalid Date' bugs
-              const timeStringMatch = b.classes.start_time.match(/(\d{2}:\d{2})/);
+              const timeStringMatch = classItem.start_time.match(/(\d{2}:\d{2})/);
               if (timeStringMatch) {
                 return timeStringMatch[1];
               }
@@ -178,7 +182,7 @@ export default function AdminPage() {
   const pendingCount = bookings.filter(b => b.status.includes('Pending')).length;
 
   // Helper for safe time extraction in UI
-  const extractTime = (timeStr: string) => {
+  const extractTime = (timeStr: string | undefined) => {
     if (!timeStr) return '';
     const match = timeStr.match(/(\d{2}:\d{2})/);
     return match ? match[1] : '';
@@ -210,6 +214,10 @@ export default function AdminPage() {
             </thead>
             <tbody className="text-sm">
               {loading ? <tr><td colSpan={5} className="p-10 text-center text-stone-400">Đang tải...</td></tr> : bookings.map((b) => {
+                
+                // FIX: Apply the array check to the UI render loop as well
+                const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+                
                 const isCustom = b.status.includes(':');
                 const displayStatus = isCustom ? b.status.split(':')[0].trim() : b.status;
                 const customTime = isCustom ? b.status.split(':')[1].trim() : null;
@@ -219,12 +227,12 @@ export default function AdminPage() {
                     <td className="px-6 py-5">
                       <span className="block font-medium text-stone-900">{b.booking_date}</span>
                       <span className="text-xs text-stone-500">
-                        {customTime ? <span className="text-amber-600 font-medium">{customTime} (Custom)</span> : extractTime(b.classes?.start_time)}
+                        {customTime ? <span className="text-amber-600 font-medium">{customTime} (Custom)</span> : extractTime(classItem?.start_time)}
                       </span>
                     </td>
                     <td className="px-6 py-5">
                       <span className="block font-medium text-stone-900">{b.name}</span>
-                      <span className="text-xs text-stone-400">{b.guest_id} - Mã: {b.classes?.description || 'N/A'}</span>
+                      <span className="text-xs text-stone-400">{b.guest_id} - Mã: {classItem?.description || 'N/A'}</span>
                     </td>
                     <td className="px-6 py-5">
                        <span className={`px-3 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-widest ${displayStatus === 'Pending' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
