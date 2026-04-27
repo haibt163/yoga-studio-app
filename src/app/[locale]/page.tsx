@@ -2,11 +2,11 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
 interface PageProps {
-  params: { locale: string }; // Changed: Removed Promise wrapper
+  params: Promise<{ locale: string }>; // Restored: Promise
 }
 
 export default async function LandingPage({ params }: PageProps) {
-  const { locale } = params; // Changed: Removed await
+  const { locale } = await params; // Restored: await
   const t = await getTranslations();
   const toggleLang = locale === 'vi' ? 'en' : 'vi';
 
@@ -34,9 +34,6 @@ export default async function LandingPage({ params }: PageProps) {
       </nav>
 
       <main className="flex-grow flex flex-col items-center justify-center px-6 pt-32 pb-20 text-center relative overflow-hidden">
-        <div className="absolute top-1/4 left-0 w-96 h-96 bg-stone-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-        <div className="absolute top-1/3 right-0 w-96 h-96 bg-stone-100/60 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-
         <div className="max-w-4xl relative z-10">
           <span className="text-xs uppercase tracking-[0.3em] text-stone-400 font-semibold mb-6 block">
             {locale === 'vi' ? 'Khám phá sự tĩnh tại' : 'Discover tranquility'}

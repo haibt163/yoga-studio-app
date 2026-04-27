@@ -1,12 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
-// FIXED: params is now a plain object to satisfy Vercel
-export default async function TestimonialsPage({ params }: { params: { locale: string } }) {
-  const { locale } = params; // No 'await' used here
+export default async function TestimonialsPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params; // Restored: await
   const t = await getTranslations();
 
-  // Mapping the 5 reviews from your JSON translation files
   const reviews = [
     { text: t('Testimonials.r1'), author: t('Testimonials.a1') },
     { text: t('Testimonials.r2'), author: t('Testimonials.a2') },
@@ -32,10 +30,9 @@ export default async function TestimonialsPage({ params }: { params: { locale: s
           <p className="text-stone-400 font-light tracking-wide uppercase text-[10px]">{t('Testimonials.subtitle')}</p>
         </div>
         
-        {/* Elegant Masonry-style Grid */}
         <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
           {reviews.map((review, i) => (
-            <div key={i} className="break-inside-avoid bg-white p-10 rounded-[2rem] border border-stone-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500">
+            <div key={i} className="break-inside-avoid bg-white p-10 rounded-[2rem] border border-stone-100 shadow-sm hover:shadow-xl transition-all duration-500">
               <div className="text-stone-200 text-4xl font-serif mb-4">“</div>
               <p className="text-stone-600 font-light leading-relaxed mb-8 italic">
                 {review.text}
