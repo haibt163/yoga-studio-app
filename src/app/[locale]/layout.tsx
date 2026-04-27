@@ -12,11 +12,11 @@ const beVietnam = Be_Vietnam_Pro({
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: { locale: string }; // Changed from Promise to plain object
+  params: { locale: string }; // Changed: Removed Promise wrapper
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {
-  const { locale } = params; // Removed 'await'
+  const { locale } = params; // Changed: Removed await
   const messages = await getMessages();
 
   return (

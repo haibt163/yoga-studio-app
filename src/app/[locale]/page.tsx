@@ -1,19 +1,17 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import Image from 'next/image';
 
 interface PageProps {
-  params: { locale: string }; // Changed from Promise to plain object
+  params: { locale: string }; // Changed: Removed Promise wrapper
 }
 
 export default async function LandingPage({ params }: PageProps) {
-  const { locale } = params; // Removed 'await'
+  const { locale } = params; // Changed: Removed await
   const t = await getTranslations();
   const toggleLang = locale === 'vi' ? 'en' : 'vi';
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-stone-50 selection:bg-stone-200 text-stone-900">
-      {/* Navigation */}
       <nav className="w-full px-8 py-8 flex justify-between items-center fixed top-0 z-50 bg-stone-50/80 backdrop-blur-md border-b border-stone-200/50 transition-all">
         <div className="text-2xl tracking-widest font-light uppercase">
           Yoga<span className="font-semibold text-stone-700">Studio</span>
@@ -35,7 +33,6 @@ export default async function LandingPage({ params }: PageProps) {
         </div>
       </nav>
 
-      {/* Hero Section */}
       <main className="flex-grow flex flex-col items-center justify-center px-6 pt-32 pb-20 text-center relative overflow-hidden">
         <div className="absolute top-1/4 left-0 w-96 h-96 bg-stone-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
         <div className="absolute top-1/3 right-0 w-96 h-96 bg-stone-100/60 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
@@ -52,16 +49,10 @@ export default async function LandingPage({ params }: PageProps) {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <Link 
-              href={`/${locale}/booking`}
-              className="px-8 py-4 bg-stone-900 text-white rounded-full text-xs uppercase tracking-widest hover:bg-stone-800 hover:-translate-y-0.5 transition-all shadow-md w-full sm:w-auto"
-            >
+            <Link href={`/${locale}/booking`} className="px-8 py-4 bg-stone-900 text-white rounded-full text-xs uppercase tracking-widest hover:bg-stone-800 transition-all shadow-md w-full sm:w-auto">
               {locale === 'vi' ? 'Đặt lịch ngay' : 'Book a Session'}
             </Link>
-            <Link 
-              href={`/${locale}/about`}
-              className="px-8 py-4 bg-white border border-stone-200 text-stone-600 rounded-full text-xs uppercase tracking-widest hover:bg-stone-50 transition-all w-full sm:w-auto"
-            >
+            <Link href={`/${locale}/about`} className="px-8 py-4 bg-white border border-stone-200 text-stone-600 rounded-full text-xs uppercase tracking-widest hover:bg-stone-50 transition-all w-full sm:w-auto">
               {locale === 'vi' ? 'Tìm hiểu thêm' : 'Learn More'}
             </Link>
           </div>
