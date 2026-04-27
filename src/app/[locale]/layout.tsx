@@ -3,7 +3,6 @@ import { getMessages } from 'next-intl/server';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import '@/app/globals.css';
 
-// Be Vietnam Pro perfectly handles Vietnamese diacritic spacing
 const beVietnam = Be_Vietnam_Pro({ 
   subsets: ['latin', 'vietnamese'],
   weight: ['300', '400', '500', '600'],
@@ -13,11 +12,11 @@ const beVietnam = Be_Vietnam_Pro({
 
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ locale: string }>;
+  params: { locale: string }; // Changed from Promise to plain object
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {
-  const { locale } = await params;
+  const { locale } = params; // Removed 'await'
   const messages = await getMessages();
 
   return (

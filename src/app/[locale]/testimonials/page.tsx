@@ -2,7 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
 export default async function TestimonialsPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
+  const { locale } = params;
   const t = await getTranslations();
 
   // Mapping the 5 reviews we just added to the JSON

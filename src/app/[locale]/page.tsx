@@ -3,11 +3,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 interface PageProps {
-  params: Promise<{ locale: string }>;
+  params: { locale: string }; // Changed from Promise to plain object
 }
 
 export default async function LandingPage({ params }: PageProps) {
-  const { locale } = await params;
+  const { locale } = params; // Removed 'await'
   const t = await getTranslations();
   const toggleLang = locale === 'vi' ? 'en' : 'vi';
 
@@ -37,7 +37,6 @@ export default async function LandingPage({ params }: PageProps) {
 
       {/* Hero Section */}
       <main className="flex-grow flex flex-col items-center justify-center px-6 pt-32 pb-20 text-center relative overflow-hidden">
-        {/* Subtle Background Elements */}
         <div className="absolute top-1/4 left-0 w-96 h-96 bg-stone-200/40 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
         <div className="absolute top-1/3 right-0 w-96 h-96 bg-stone-100/60 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
 
@@ -69,7 +68,6 @@ export default async function LandingPage({ params }: PageProps) {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="w-full py-12 px-8 border-t border-stone-200/50 bg-white/50 text-center text-xs text-stone-400 uppercase tracking-widest">
         <p>© {new Date().getFullYear()} YogaStudio. {locale === 'vi' ? 'Mọi quyền được bảo lưu.' : 'All rights reserved.'}</p>
       </footer>
