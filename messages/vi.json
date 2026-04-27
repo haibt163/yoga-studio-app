@@ -1,0 +1,80 @@
+{
+  "Navigation": {
+    "about": "Giới Thiệu",
+    "booking": "Đặt Lịch",
+    "testimonials": "Cảm Nhận",
+    "calendar": "Lịch Tập"
+  },
+  "Hero": {
+    "title": "Tìm Lại Sự Cân Bằng",
+    "subtitle": "Không gian yoga tối giản dành cho sự tập trung và an tĩnh."
+  },
+  "Booking": {
+    "title": "Cổng Đặt Lịch",
+    "subtitle": "Vui lòng nhập ID và mã PIN 6 số của bạn.",
+    "guestId": "ID Học Viên",
+    "pin": "Mã PIN (6 số)",
+    "login": "Đăng Nhập"
+  },
+  "Dashboard": {
+    "welcome": "Chào mừng",
+    "subtitle": "Lịch tập luyện của bạn trong 4 tuần tới.",
+    "classCode": "Mã lớp",
+    "reschedule": "Đổi lịch",
+    "cancel": "Hủy",
+    "confirmCancel": "Bạn có chắc chắn muốn hủy lịch này không?",
+    "logout": "Đăng xuất",
+    "loading": "Đang tải dữ liệu..."
+  },
+  "Admin": {
+    "title": "Bảng Điều Khiển",
+    "schedule": "Quản lý Lịch tập",
+    "totalBookings": "Tổng cộng",
+    "pendingRequests": "yêu cầu chờ duyệt",
+    "date": "Ngày / Khung giờ",
+    "student": "Học viên",
+    "classCode": "Mã Lớp",
+    "status": "Trạng thái",
+    "action": "Thao tác",
+    "approve": "Duyệt",
+    "approved": "Đã duyệt",
+    "loading": "Đang tải dữ liệu..."
+  },
+  "Calendar": {
+    "title": "Lịch Tuần Này",
+    "subtitle": "Xem nhanh các khung giờ và đồng bộ lên điện thoại.",
+    "sync": "Đồng bộ Apple Calendar",
+    "loading": "Đang tải lịch...",
+    "empty": "Trống",
+    "busy": "Đã Kín",
+    "adminOn": "Thoát Admin",
+    "adminOff": "Admin",
+    "loginTitle": "Đăng nhập Admin",
+    "username": "Tài khoản",
+    "password": "Mật khẩu",
+    "cancel": "Hủy",
+    "login": "Đăng nhập",
+    "unknown": "Khách"
+  },
+  "About": {
+    "title": "Hành Trình Của Tôi",
+    "subtitle": "Truyền cảm hứng, nuôi dưỡng sự cân bằng.",
+    "p1": "Tôi là một huấn luyện viên yoga tận tâm với hơn 8 năm kinh nghiệm giảng dạy tại các trung tâm yoga hàng đầu. Tôi tin rằng yoga là một hành trình mang tính cá nhân cao.",
+    "p2": "Trước khi cống hiến cho yoga, tôi đã có thời gian dài làm việc trong ngành nhà hàng khách sạn và bảo hiểm. Nền tảng này giúp tôi thấm nhuần tư duy hướng tới sự xuất sắc, thấu hiểu và làm hài lòng khách hàng.",
+    "p3": "Hiện tại, bên cạnh việc dạy tại trung tâm, tôi cung cấp các lớp học 1-kèm-1 riêng biệt. Học viên của tôi thường là những người bận rộn hoặc muốn cải thiện kỹ năng nhanh chóng, và họ tìm đến tôi hoàn toàn qua sự giới thiệu truyền miệng."
+  },
+  "Testimonials": {
+    "title": "Cảm Nhận",
+    "subtitle": "Đánh giá từ học viên cá nhân và đối tác trung tâm.",
+    "r1": "Các buổi tập riêng của cô ấy thực sự tạo ra sự khác biệt. Dù lịch trình của tôi rất lộn xộn, cô ấy luôn biết cách điều chỉnh bài tập để giúp tôi xả stress và tăng cường thể lực.",
+    "a1": "Sarah M. (Học viên cá nhân)",
+    "r2": "Một người vô cùng chuyên nghiệp. Kinh nghiệm chăm sóc khách hàng của cô ấy thể hiện rõ qua cách cô ấy thấu hiểu những gì học viên cần.",
+    "a2": "David L. (Học viên cá nhân)",
+    "r3": "Tôi đã cải thiện tư thế của mình trong 3 tháng học riêng nhiều hơn hẳn 2 năm tập lớp đông người.",
+    "a3": "Elena T. (Học viên cá nhân)",
+    "r4": "Luôn là một trong những huấn luyện viên được đánh giá cao nhất tại trung tâm của chúng tôi. Lớp học của cô luôn kín chỗ và năng lượng vô cùng tuyệt vời.",
+    "a4": "Quản lý CITIGYM",
+    "r5": "Một huấn luyện viên đáng tin cậy, kiến thức sâu rộng và luôn mang đến trải nghiệm chăm sóc chuẩn mực, cao cấp cho các chương trình sức khỏe của chúng tôi.",
+    "a5": "Trung tâm Estella"
+  }
+}

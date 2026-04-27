@@ -1,26 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* We use the Stone palette for a high-end, minimal feel */
+  --background: #fafaf9; /* Stone 50 */
+  --foreground: #1c1917; /* Stone 900 */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Remove the hardcoded Dark Mode if you want to stick to the minimal light-stone theme */
+/* Or, use a soft Stone dark mode instead of pure black */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1c1917;
+    --foreground: #fafaf9;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* CRITICAL FIX: 
+     We use the CSS variable from layout.tsx. 
+     If the font fails to load, it falls back to system sans-serif. 
+  */
+  font-family: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth transitions for a "catchy" feel */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Custom selection color for that premium touch */
+::selection {
+  background-color: #e7e5e4; /* Stone 200 */
+  color: #1c1917;
 }
