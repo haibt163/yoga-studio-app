@@ -42,8 +42,6 @@ export default function BookingPage() {
   useEffect(() => {
     if (!loggedInGuest) return;
     async function loadDashboard() {
-      // Note: For flexible slots, we might not always have a strict 'classes' join if they pick a custom time,
-      // but we still fetch the original class data for display.
       const { data: bData } = await supabase
         .from('bookings')
         .select('id, booking_date, status, classes (description, start_time)')
@@ -58,29 +56,32 @@ export default function BookingPage() {
   }, [loggedInGuest, supabase]);
 
   // 3. Real-Time Vacancy Checker (The Collision Detector)
-  // When a date is selected, find EVERY booking on that date to block those specific hours.
   useEffect(() => {
     if (!selectedNewDate) {
       setTakenSlots([]);
       return;
     }
     async function checkVacancies() {
-      // We need to look at the start_time of the classes associated with the bookings on this day.
       const { data } = await supabase
         .from('bookings')
         .select('classes(start_time)')
         .eq('booking_date', selectedNewDate);
         
       if (data) {
-        // Extract just the hour string (e.g., "08:00") to block it out
         const blockedTimes = data
-          .filter(b => b.classes) // Ensure the relation exists
+          .filter(b => b.classes) 
           .map(b => {
-             const d = new Date(b.classes.start_time);
-             const hours = String(d.getHours()).padStart(2, '0');
-             const mins = String(d.getMinutes()).padStart(2, '0');
-             return `${hours}:${mins}`;
-          });
+             // FIX: Safely handle classes as either an object or an array
+             const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+             
+             if (!classItem?.start_time) return null;
+
+             // FIX: Use regex to extract time string safely (avoids Safari Invalid Date crash)
+             const timeMatch = classItem.start_time.match(/(\d{2}:\d{2})/);
+             return timeMatch ? timeMatch[1] : null;
+          })
+          .filter(Boolean) as string[];
+          
         setTakenSlots(blockedTimes);
       }
     }
@@ -105,10 +106,6 @@ export default function BookingPage() {
     if (!selectedNewDate || !selectedNewTime) return alert("Vui lòng chọn ngày và giờ / Please select date & time");
     setRescheduleLoading(true);
     
-    // In a fully flexible system, we would ideally create a NEW class record for this custom time.
-    // For this implementation, we will log the request in the status field so Admin knows what they want.
-    // E.g. Status becomes "Pending: 2026-05-10 08:00"
-    
     const { error } = await supabase.from('bookings')
       .update({ 
          status: `Pending: ${selectedNewTime}`, 
@@ -118,7 +115,7 @@ export default function BookingPage() {
       
     if (!error) {
       alert("Đã gửi yêu cầu đổi lịch / Request sent");
-      setBookings(bookings.map(b => b.id === bookingToReschedule.id ? { ...b, status: 'Pending', booking_date: selectedNewDate } : b));
+      setBookings(bookings.map(b => b.id === bookingToReschedule.id ? { ...b, status: `Pending: ${selectedNewTime}`, booking_date: selectedNewDate } : b));
       setIsModalOpen(false);
     } else {
       alert("Lỗi / Error processing request");
@@ -144,29 +141,29 @@ export default function BookingPage() {
     
     let possibleSlots: string[] = [];
 
-    // 1. Generate based on your strict rules
-    if (dayOfWeek === 1) { // Monday 8:00 - 10:00 (1hr slots: 8:00 and 9:00)
-      possibleSlots = ["08:00", "09:00"];
-    } else if (dayOfWeek === 2) { // Tuesday 6:00 - 8:00 (1hr slots: 6:00 and 7:00)
-      possibleSlots = ["06:00", "07:00"];
-    } else if (dayOfWeek === 4 || dayOfWeek === 6) { // Thu & Sat 16:00 - 17:00
-      possibleSlots = ["16:00"];
-    } else if (dayOfWeek === 0) { // Sunday 9:30 - 10:30
-      possibleSlots = ["09:30"];
-    }
+    if (dayOfWeek === 1) possibleSlots = ["08:00", "09:00"];
+    else if (dayOfWeek === 2) possibleSlots = ["06:00", "07:00"];
+    else if (dayOfWeek === 4 || dayOfWeek === 6) possibleSlots = ["16:00"];
+    else if (dayOfWeek === 0) possibleSlots = ["09:30"];
 
-    // 2. Filter out slots that are already taken in the database
     return possibleSlots.filter(slot => !takenSlots.includes(slot));
   };
 
   const availableSlots = getAvailableTimeSlots(selectedNewDate);
+
+  // Helper for safe time extraction in UI
+  const extractTime = (classesObj: any) => {
+    const data = Array.isArray(classesObj) ? classesObj[0] : classesObj;
+    if (!data?.start_time) return '';
+    const match = data.start_time.match(/(\d{2}:\d{2})/);
+    return match ? match[1] : '';
+  };
 
   // ==========================================
   // VIEW 1: LOGIN FORM
   // ==========================================
   if (!loggedInGuest) {
     return (
-       // ... (Keep your exact existing login form UI here) ...
        <div className="min-h-screen flex flex-col items-center justify-center px-6">
         <Link href={`/${locale}`} className="mb-8 text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
           ← {locale === 'vi' ? 'Quay lại' : 'Go Back'}
@@ -215,7 +212,11 @@ export default function BookingPage() {
              <div className="p-10 text-center text-stone-400 animate-pulse">{dashboardT('loading')}</div>
           ) : bookings.length === 0 ? (
              <div className="p-10 text-center text-stone-400 border border-stone-200 border-dashed rounded-3xl">Bạn chưa có lịch tập nào.</div>
-          ) : bookings.map((b) => (
+          ) : bookings.map((b) => {
+            // FIX: Ensure classItem is safely extracted for UI rendering
+            const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+            
+            return (
             <div key={b.id} className="bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col md:flex-row md:justify-between md:items-center">
               <div className="mb-6 md:mb-0">
                 <div className="flex items-center space-x-3 mb-3">
@@ -223,11 +224,11 @@ export default function BookingPage() {
                     {b.status.includes('Pending') ? 'Pending' : b.status}
                   </span>
                 </div>
-                <h3 className="text-xl font-medium text-stone-800">{dashboardT('classCode')}: {b.classes?.description || "Custom"}</h3>
+                <h3 className="text-xl font-medium text-stone-800">{dashboardT('classCode')}: {classItem?.description || "Custom"}</h3>
                 <p className="text-stone-500 mt-1">
                   {new Date(b.booking_date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
                   <span className="mx-2">•</span> 
-                  {b.status.includes('Pending') ? b.status.split(': ')[1] : new Date(b.classes?.start_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                  {b.status.includes('Pending') ? b.status.split(': ')[1] : extractTime(classItem)}
                 </p>
               </div>
               
@@ -240,7 +241,7 @@ export default function BookingPage() {
                 </button>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </main>
 
