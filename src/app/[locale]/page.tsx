@@ -18,30 +18,35 @@ export default async function LandingPage({ params }: PageProps) {
         {/* iOS Safe Area Spacer - natively pushes content down below the notch without breaking CSS math */}
         <div className="w-full pt-[env(safe-area-inset-top,0px)]"></div>
         
-        {/* Navigation Content */}
-        <nav className="w-full max-w-7xl mx-auto px-8 py-5 flex justify-between items-center">
-          <div className="text-2xl tracking-widest font-light uppercase">
+        {/* Navigation Content - Now fully responsive! */}
+        <nav className="w-full max-w-7xl mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-y-4">
+          
+          {/* 1. Logo (Always top left) */}
+          <div className="text-xl md:text-2xl tracking-widest font-light uppercase order-1">
             Yoga<span className="font-semibold text-stone-700">Studio</span>
           </div>
           
-          <div className="hidden md:flex space-x-12 text-xs tracking-widest text-stone-500 uppercase font-medium">
+          {/* 2. Links (Drops to bottom row on mobile, stays in middle on desktop) */}
+          <div className="w-full md:w-auto flex justify-center space-x-8 md:space-x-12 text-[10px] md:text-xs tracking-widest text-stone-500 uppercase font-medium order-3 md:order-2 border-t border-stone-200/50 md:border-none pt-4 md:pt-0">
             <Link href={`/${locale}/about`} className="hover:text-stone-900 transition-colors">{t('Navigation.about')}</Link>
             <Link href={`/${locale}/testimonials`} className="hover:text-stone-900 transition-colors">{t('Navigation.testimonials')}</Link>
             <Link href={`/${locale}/calendar`} className="hover:text-stone-900 transition-colors">{t('Navigation.calendar')}</Link>
           </div>
 
-          <div className="flex items-center space-x-6">
+          {/* 3. Actions (Always top right) */}
+          <div className="flex items-center space-x-4 md:space-x-6 order-2 md:order-3">
             <Link href={`/${toggleLang}`} className="text-[10px] font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
               {locale === 'vi' ? 'EN' : 'VN'}
             </Link>
-            <Link href={`/${locale}/booking`} className="text-[10px] font-bold border border-stone-300 px-6 py-3 rounded-full hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-all uppercase tracking-widest shadow-sm">
+            <Link href={`/${locale}/booking`} className="text-[10px] font-bold border border-stone-300 px-4 md:px-6 py-2 md:py-3 rounded-full hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-all uppercase tracking-widest shadow-sm">
               {t('Navigation.booking')}
             </Link>
           </div>
         </nav>
       </header>
 
-      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-48 pb-20 text-center relative overflow-hidden">
+      {/* Increased top padding slightly to account for the taller mobile header */}
+      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-56 pb-20 text-center relative overflow-hidden">
         <div className="max-w-4xl relative z-10">
           <span className="text-xs uppercase tracking-[0.3em] text-stone-400 font-semibold mb-6 block">
             {locale === 'vi' ? 'Khám phá sự tĩnh tại' : 'Discover tranquility'}
