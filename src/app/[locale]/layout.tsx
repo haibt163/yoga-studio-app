@@ -1,6 +1,7 @@
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { Be_Vietnam_Pro } from 'next/font/google';
+import type { Viewport } from 'next';
 import '@/app/globals.css';
 
 const beVietnam = Be_Vietnam_Pro({ 
@@ -10,13 +11,21 @@ const beVietnam = Be_Vietnam_Pro({
   display: 'swap',
 });
 
+// CRITICAL SAFARI FIX: Activates safe-area-insets on Apple devices
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#fafaf9',
+};
+
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ locale: string }>; // Restored: Promise
+  params: Promise<{ locale: string }>; 
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {
-  const { locale } = await params; // Restored: await
+  const { locale } = await params; 
   const messages = await getMessages();
 
   return (

@@ -1,13 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  /* We use the Stone palette for a high-end, minimal feel */
   --background: #fafaf9; /* Stone 50 */
   --foreground: #1c1917; /* Stone 900 */
 }
 
-/* Remove the hardcoded Dark Mode if you want to stick to the minimal light-stone theme */
-/* Or, use a soft Stone dark mode instead of pure black */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #1c1917;
@@ -18,22 +15,35 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  /* CRITICAL FIX: 
-     We use the CSS variable from layout.tsx. 
-     If the font fails to load, it falls back to system sans-serif. 
-  */
   font-family: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Smooth transitions for a "catchy" feel */
 * {
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Custom selection color for that premium touch */
 ::selection {
-  background-color: #e7e5e4; /* Stone 200 */
+  background-color: #e7e5e4; 
   color: #1c1917;
+}
+
+/* --- APPLE SAFARI FIXES --- */
+@layer base {
+  .ios-header-fix {
+    /* Ensures the header doesn't disappear on iOS Safari */
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    transform: translateZ(0); 
+  }
+  
+  /* Safari Autofill text visibility fix (Mac & iOS) */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover, 
+  input:-webkit-autofill:focus, 
+  input:-webkit-autofill:active {
+      -webkit-text-fill-color: #1c1917 !important; /* Forces text to be Stone-900 */
+      transition: background-color 5000s ease-in-out 0s;
+  }
 }

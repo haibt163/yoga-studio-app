@@ -2,12 +2,12 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params; // Restored: await
+  const { locale } = await params;
   const t = await getTranslations();
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans selection:bg-stone-200 text-stone-900">
-      <nav className="w-full px-8 py-8 flex justify-between items-center fixed top-0 z-50 bg-stone-50/80 backdrop-blur-md border-b border-stone-200/50">
+      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),2rem)] pb-6 flex justify-between items-center fixed top-0 z-50 bg-white/90 backdrop-blur-md border-b border-stone-200/50 transition-all ios-header-fix">
         <Link href={`/${locale}`} className="text-2xl tracking-widest font-light uppercase">
           Yoga<span className="font-semibold text-stone-700">Studio</span>
         </Link>
