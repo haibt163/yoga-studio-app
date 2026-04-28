@@ -6,13 +6,16 @@ import { createClient } from '@/utils/supabase/client';
 export default function AdminPage() {
   const supabase = useMemo(() => createClient(), []);
   
+  // --- Security State ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  // --- Data State ---
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // --- Rescheduling Modal State ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [bookingToEdit, setBookingToEdit] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -35,12 +38,14 @@ export default function AdminPage() {
     setLoading(false);
   }
 
+  // --- MATHEMATICAL COLLISION DETECTOR ---
   useEffect(() => {
     if (!selectedDate) {
       setTakenSlots([]);
       return;
     }
     async function checkCollisions() {
+      // Fetch all bookings for the target day
       const { data } = await supabase
         .from('bookings')
         .select('id, status, classes(start_time)')
@@ -49,20 +54,29 @@ export default function AdminPage() {
       if (data) {
         const blocked = data
           .filter(b => {
+            // Only care about Confirmed statuses
             const isConfirmed = b.status?.toLowerCase().includes('confirmed');
+            // Do NOT block the slot of the exact booking the Admin is currently moving
             const isNotCurrentEdit = bookingToEdit ? b.id !== bookingToEdit.id : true;
             return isConfirmed && isNotCurrentEdit;
           })
           .map(b => {
+            // If it's a custom time like "Confirmed: 17:45"
             if (b.status.includes(':')) {
               return b.status.split(':')[1].trim();
             }
             
+            // FIX: Safely handle classes as either an object or an array to satisfy TypeScript
             const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
             
+            // If it's a standard template time, safely extract it as a string
+            // E.g., "2026-05-03 17:45:00" -> "17:45"
             if (classItem?.start_time) {
+              // Bypassing new Date() to prevent Safari/iOS 'Invalid Date' bugs
               const timeStringMatch = classItem.start_time.match(/(\d{2}:\d{2})/);
-              if (timeStringMatch) return timeStringMatch[1];
+              if (timeStringMatch) {
+                return timeStringMatch[1];
+              }
             }
             return null;
           })
@@ -74,6 +88,7 @@ export default function AdminPage() {
     checkCollisions();
   }, [selectedDate, bookingToEdit, supabase]);
 
+  // Generate 30-min interval slots from 06:00 to 19:00 for maximum flexibility
   const allAvailableHours = useMemo(() => {
     const slots = [];
     for (let h = 6; h <= 19; h++) {
@@ -83,6 +98,7 @@ export default function AdminPage() {
     return slots;
   }, []);
 
+  // 2. Mathematical 60-Minute Overlap Filter
   const validAdminSlots = allAvailableHours.filter(slot => {
     const [h, m] = slot.split(':').map(Number);
     const slotMins = h * 60 + m;
@@ -90,11 +106,17 @@ export default function AdminPage() {
     for (const taken of takenSlots) {
       const [th, tm] = taken.split(':').map(Number);
       const takenMins = th * 60 + tm;
-      if (Math.abs(slotMins - takenMins) < 60) return false; 
+      
+      // Since classes are 1-hour max, if the time difference is less than 60 mins, it's an overlap.
+      // Now perfectly handles 17:45 vs 17:00 and 17:30
+      if (Math.abs(slotMins - takenMins) < 60) {
+        return false; 
+      }
     }
     return true;
   });
 
+  // --- ACTIONS ---
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (username === 'admin' && password === 'Trang@123') setIsAuthenticated(true);
@@ -123,6 +145,8 @@ export default function AdminPage() {
   const submitReschedule = async () => {
     if (!selectedDate || !selectedTime) return alert("Vui lòng chọn ngày và giờ mới.");
     setActionLoading(true);
+    
+    // Automatically flag as Confirmed since the Admin moved it
     const newStatus = `Confirmed: ${selectedTime}`;
 
     const { error } = await supabase.from('bookings')
@@ -130,6 +154,7 @@ export default function AdminPage() {
       .eq('id', bookingToEdit.id);
 
     if (!error) {
+      // Re-fetch everything to ensure deep consistency
       fetchData();
       setIsModalOpen(false);
     } else {
@@ -138,15 +163,15 @@ export default function AdminPage() {
     setActionLoading(false);
   };
 
+  // --- RENDER ---
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center font-sans px-6 bg-stone-50">
         <div className="w-full max-w-sm bg-white p-10 rounded-3xl shadow-xl border border-stone-100">
-          <h1 className="text-2xl font-light tracking-widest text-center mb-8 uppercase">Studio<span className="font-semibold">Admin</span></h1>
+          <h1 className="text-2xl font-light tracking-widest text-center mb-8 uppercase text-stone-900">Studio<span className="font-semibold">Admin</span></h1>
           <form onSubmit={handleAdminLogin} className="space-y-6">
-            {/* Added explicit text-stone-900 and appearance-none to fix Safari visibility bug */}
             <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none" placeholder="Tài khoản" required />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none tracking-widest" placeholder="Mật khẩu" required />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent tracking-widest text-stone-900 appearance-none rounded-none" placeholder="Mật khẩu" required />
             <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-full text-xs tracking-widest uppercase hover:bg-stone-800 transition-colors shadow-md mt-4">Đăng nhập</button>
           </form>
         </div>
@@ -156,6 +181,7 @@ export default function AdminPage() {
 
   const pendingCount = bookings.filter(b => b.status.includes('Pending')).length;
 
+  // Helper for safe time extraction in UI
   const extractTime = (timeStr: string | undefined) => {
     if (!timeStr) return '';
     const match = timeStr.match(/(\d{2}:\d{2})/);
@@ -164,8 +190,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen font-sans pb-20 bg-stone-50">
-      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),2rem)] pb-6 bg-white/90 backdrop-blur-md border-b border-stone-200 flex justify-between items-center mb-10 sticky top-0 z-10 ios-header-fix">
-        <div className="text-xl tracking-widest font-light uppercase">Studio<span className="font-semibold">Admin</span></div>
+      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),1.5rem)] pb-6 bg-white/90 backdrop-blur-md border-b border-stone-200 flex justify-between items-center mb-10 sticky top-0 z-10 ios-header-fix">
+        <div className="text-xl tracking-widest font-light uppercase text-stone-900">Studio<span className="font-semibold">Admin</span></div>
         <button onClick={() => setIsAuthenticated(false)} className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900">Đăng xuất</button>
       </nav>
 
@@ -189,7 +215,9 @@ export default function AdminPage() {
             <tbody className="text-sm">
               {loading ? <tr><td colSpan={5} className="p-10 text-center text-stone-400">Đang tải...</td></tr> : bookings.map((b) => {
                 
+                // FIX: Apply the array check to the UI render loop as well
                 const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+                
                 const isCustom = b.status.includes(':');
                 const displayStatus = isCustom ? b.status.split(':')[0].trim() : b.status;
                 const customTime = isCustom ? b.status.split(':')[1].trim() : null;
@@ -240,7 +268,7 @@ export default function AdminPage() {
                 <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">1. Chọn Ngày</label>
                 <input 
                   type="date"
-                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-900 text-stone-900"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-900 text-stone-900 appearance-none"
                   value={selectedDate}
                   onChange={(e) => { setSelectedDate(e.target.value); setSelectedTime(''); }}
                 />
@@ -259,6 +287,9 @@ export default function AdminPage() {
                     <option key={slot} value={slot}>{slot}</option>
                   ))}
                 </select>
+                {selectedDate && validAdminSlots.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-2 italic">Ngày này đã hoàn toàn kín lịch.</p>
+                )}
               </div>
             </div>
 

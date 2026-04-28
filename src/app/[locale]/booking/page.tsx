@@ -55,7 +55,7 @@ export default function BookingPage() {
     loadDashboard();
   }, [loggedInGuest, supabase]);
 
-  // 3. Real-Time Vacancy Checker
+  // 3. Real-Time Vacancy Checker (The Collision Detector)
   useEffect(() => {
     if (!selectedNewDate) {
       setTakenSlots([]);
@@ -71,8 +71,12 @@ export default function BookingPage() {
         const blockedTimes = data
           .filter(b => b.classes) 
           .map(b => {
+             // FIX: Safely handle classes as either an object or an array
              const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+             
              if (!classItem?.start_time) return null;
+
+             // FIX: Use regex to extract time string safely (avoids Safari Invalid Date crash)
              const timeMatch = classItem.start_time.match(/(\d{2}:\d{2})/);
              return timeMatch ? timeMatch[1] : null;
           })
@@ -119,6 +123,7 @@ export default function BookingPage() {
     setRescheduleLoading(false);
   };
 
+  // --- FLEXIBLE SLOT GENERATOR ---
   const next30Days = Array.from({length: 30}, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + (i + 1));
@@ -130,8 +135,10 @@ export default function BookingPage() {
 
   const getAvailableTimeSlots = (dateString: string) => {
     if (!dateString) return [];
+    
     const [y, m, d] = dateString.split('-');
     const dayOfWeek = new Date(Number(y), Number(m)-1, Number(d)).getDay(); 
+    
     let possibleSlots: string[] = [];
 
     if (dayOfWeek === 1) possibleSlots = ["08:00", "09:00"];
@@ -144,6 +151,7 @@ export default function BookingPage() {
 
   const availableSlots = getAvailableTimeSlots(selectedNewDate);
 
+  // Helper for safe time extraction in UI
   const extractTime = (classesObj: any) => {
     const data = Array.isArray(classesObj) ? classesObj[0] : classesObj;
     if (!data?.start_time) return '';
@@ -151,9 +159,12 @@ export default function BookingPage() {
     return match ? match[1] : '';
   };
 
+  // ==========================================
+  // VIEW 1: LOGIN FORM
+  // ==========================================
   if (!loggedInGuest) {
     return (
-       <div className="min-h-screen flex flex-col items-center justify-center px-6">
+       <div className="min-h-screen flex flex-col items-center justify-center px-6 pt-[env(safe-area-inset-top)]">
         <Link href={`/${locale}`} className="mb-8 text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
           ← {locale === 'vi' ? 'Quay lại' : 'Go Back'}
         </Link>
@@ -165,7 +176,6 @@ export default function BookingPage() {
           <form className="space-y-6" onSubmit={handleLogin}>
             <div>
               <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">{t('guestId')}</label>
-              {/* Added explicit text-stone-900 and appearance-none to fix Safari visibility bug */}
               <input type="text" value={guestId} onChange={(e) => setGuestId(e.target.value)} required className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none" placeholder="VD: CN001" />
             </div>
             <div>
@@ -181,10 +191,13 @@ export default function BookingPage() {
     );
   }
 
+  // ==========================================
+  // VIEW 2: DASHBOARD
+  // ==========================================
   return (
     <div className="min-h-screen pb-20">
-      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),2rem)] pb-6 flex justify-between items-center border-b border-stone-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 ios-header-fix">
-        <div className="text-xl tracking-widest font-light uppercase">Yoga<span className="font-semibold">Studio</span></div>
+      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),1.5rem)] pb-6 flex justify-between items-center border-b border-stone-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 ios-header-fix">
+        <div className="text-xl tracking-widest font-light uppercase text-stone-900">Yoga<span className="font-semibold">Studio</span></div>
         <button onClick={() => setLoggedInGuest(null)} className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
           {dashboardT('logout')}
         </button>
@@ -200,6 +213,7 @@ export default function BookingPage() {
           ) : bookings.length === 0 ? (
              <div className="p-10 text-center text-stone-400 border border-stone-200 border-dashed rounded-3xl">Bạn chưa có lịch tập nào.</div>
           ) : bookings.map((b) => {
+            // FIX: Ensure classItem is safely extracted for UI rendering
             const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
             
             return (
@@ -231,6 +245,7 @@ export default function BookingPage() {
         </div>
       </main>
 
+      {/* --- RESCHEDULE MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
@@ -240,35 +255,21 @@ export default function BookingPage() {
             <div className="space-y-6 mb-10">
               <div>
                 <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">1. Chọn Ngày</label>
-                <select 
-                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-900 transition-colors text-stone-900"
-                  value={selectedNewDate}
-                  onChange={(e) => { setSelectedNewDate(e.target.value); setSelectedNewTime(''); }}
-                >
+                <select className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900" value={selectedNewDate} onChange={(e) => { setSelectedNewDate(e.target.value); setSelectedNewTime(''); }}>
                   <option value="">-- Chọn ngày / Select date --</option>
-                  {next30Days.map(date => (
-                    <option key={date} value={date}>
-                      {new Date(date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
-                    </option>
-                  ))}
+                  {next30Days.map(date => <option key={date} value={date}>{new Date(date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}</option>)}
                 </select>
               </div>
 
               <div>
                 <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">2. Chọn Giờ</label>
-                <select 
-                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-900 transition-colors disabled:opacity-50 text-stone-900"
-                  value={selectedNewTime}
-                  onChange={(e) => setSelectedNewTime(e.target.value)}
-                  disabled={!selectedNewDate}
-                >
+                <select className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 disabled:opacity-50" value={selectedNewTime} onChange={(e) => setSelectedNewTime(e.target.value)} disabled={!selectedNewDate}>
                   <option value="">-- Chọn giờ / Select time --</option>
-                  {availableSlots.map(slot => (
-                    <option key={slot} value={slot}>
-                      {slot} (1 tiếng)
-                    </option>
-                  ))}
+                  {availableSlots.map(slot => <option key={slot} value={slot}>{slot} (1 tiếng)</option>)}
                 </select>
+                {selectedNewDate && availableSlots.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-2 italic">Ngày này đã kín lịch hoặc không có ca tập.</p>
+                )}
               </div>
             </div>
 

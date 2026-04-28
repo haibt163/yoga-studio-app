@@ -11,10 +11,11 @@ const beVietnam = Be_Vietnam_Pro({
   display: 'swap',
 });
 
-// CRITICAL SAFARI FIX: Activates safe-area-insets on Apple devices
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#fafaf9',
 };
@@ -30,7 +31,7 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
 
   return (
     <html lang={locale}>
-      <body className={`${beVietnam.className} bg-gradient-to-br from-stone-50 to-stone-100 text-stone-900 antialiased selection:bg-stone-200 min-h-screen`}>
+      <body className={`${beVietnam.className} bg-stone-50 text-stone-900 antialiased selection:bg-stone-200 min-h-screen`}>
         <NextIntlClientProvider messages={messages}>
           {children}
         </NextIntlClientProvider>

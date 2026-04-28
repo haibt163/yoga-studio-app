@@ -20,8 +20,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+/* Specific transitions instead of global * to prevent Safari rendering bugs */
+nav, button, a, input, select {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
 
 ::selection {
@@ -29,21 +30,22 @@ body {
   color: #1c1917;
 }
 
-/* --- APPLE SAFARI FIXES --- */
-@layer base {
-  .ios-header-fix {
-    /* Ensures the header doesn't disappear on iOS Safari */
-    -webkit-backdrop-filter: blur(12px);
-    backdrop-filter: blur(12px);
-    transform: translateZ(0); 
-  }
-  
-  /* Safari Autofill text visibility fix (Mac & iOS) */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover, 
-  input:-webkit-autofill:focus, 
-  input:-webkit-autofill:active {
-      -webkit-text-fill-color: #1c1917 !important; /* Forces text to be Stone-900 */
-      transition: background-color 5000s ease-in-out 0s;
-  }
+/* --- APPLE SAFARI & IOS FIXES --- */
+.ios-header-fix {
+  -webkit-backdrop-filter: blur(16px) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  isolation: isolate;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* Safari Autofill text visibility fix (Mac & iOS) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-text-fill-color: #1c1917 !important;
+    -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+    transition: background-color 5000s ease-in-out 0s;
 }

@@ -42,33 +42,51 @@ export default function CalendarPage() {
       const endOfNextWeek = new Date(next7Days[6]);
       endOfNextWeek.setHours(23, 59, 59, 999);
 
-      // FIX: Fetch classes and guests separately to avoid the PGRST200 Foreign Key Error
-      const { data: classData, error: classError } = await supabase
-        .from('classes')
-        .select('*')
-        .gte('start_time', startOfToday.toISOString())
-        .lte('start_time', endOfNextWeek.toISOString())
-        .order('start_time', { ascending: true });
+      // FIX: Use the exact working query structure from the Admin page to avoid Supabase errors.
+      // Removed 'duration' to prevent Foreign Key missing column crashes.
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .select('id, name, guest_id, status, booking_date, classes(description, start_time)')
+        .gte('booking_date', startOfToday.toISOString().split('T')[0])
+        .lte('booking_date', endOfNextWeek.toISOString().split('T')[0])
+        .order('booking_date', { ascending: true });
 
-      const { data: guestData, error: guestError } = await supabase
-        .from('guests')
-        .select('guest_id, name');
-
-      if (classError || guestError) {
-        console.error("Fetch Calendar Error:", classError || guestError);
+      if (bookingError) {
+        console.error("Supabase Error Details:", bookingError.message, bookingError.details);
         setLoading(false);
         return;
       }
 
-      // Map the guest names manually to the classes
-      const guestMap = new Map(guestData?.map(g => [g.guest_id.trim(), g.name]));
-      
-      const mergedClasses = (classData || []).map(cls => ({
-        ...cls,
-        guests: { name: guestMap.get(cls.guest_id?.trim()) || calT('unknown') }
-      }));
+      // Safely filter for Confirmed statuses in JavaScript to avoid PostgREST syntax issues
+      const confirmedBookings = (bookingData || []).filter(b => 
+        b.status && b.status.toLowerCase().includes('confirmed')
+      );
 
-      setClasses(mergedClasses);
+      // Map bookings back into the exact shape your UI expects
+      const mappedClasses = confirmedBookings.map(b => {
+        const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+        
+        let timeString = '00:00';
+        if (b.status?.includes(':')) {
+           timeString = b.status.split(':')[1].trim();
+        } else if (classItem?.start_time) {
+           const match = classItem.start_time.match(/(\d{2}:\d{2})/);
+           if (match) timeString = match[1];
+        }
+
+        // Create a full ISO string (e.g. "2026-05-04T17:45:00") so your getClassesForDay logic works perfectly
+        const fakeStartTime = `${b.booking_date}T${timeString}:00`;
+
+        return {
+          class_id: b.id,
+          start_time: fakeStartTime, 
+          description: classItem?.description || 'Custom',
+          duration: 60, // Safely fallback to 60 minutes
+          guests: { name: b.name || b.guest_id }
+        };
+      });
+
+      setClasses(mappedClasses);
       setLoading(false);
     }
     fetchCalendar();
@@ -112,8 +130,8 @@ export default function CalendarPage() {
 
   return (
     <div className="min-h-screen pb-20 bg-stone-50 font-sans">
-      <nav className="w-full px-8 py-6 flex justify-between items-center border-b border-stone-200 bg-white/80 backdrop-blur-md sticky top-0 z-10">
-        <Link href={`/${locale}`} className="text-xl tracking-widest font-light uppercase">
+      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),1.5rem)] pb-6 flex justify-between items-center border-b border-stone-200/50 bg-white/90 backdrop-blur-md sticky top-0 z-50 transition-all ios-header-fix">
+        <Link href={`/${locale}`} className="text-xl tracking-widest font-light uppercase text-stone-900">
           Yoga<span className="font-semibold text-stone-700">Studio</span>
         </Link>
         <div className="flex space-x-6 items-center">
@@ -142,7 +160,7 @@ export default function CalendarPage() {
             onClick={handleSyncCalendar}
             className="mt-6 md:mt-0 px-6 py-3 bg-stone-900 text-white rounded-full text-xs tracking-widest uppercase hover:bg-stone-800 transition-all shadow-md flex items-center justify-center space-x-2 w-full md:w-auto"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             <span>{calT('sync')}</span>
           </button>
         </header>
@@ -172,24 +190,26 @@ export default function CalendarPage() {
                     {dayClasses.length === 0 ? (
                       <div className="h-full min-h-[120px] flex items-center justify-center text-[10px] text-stone-300 uppercase tracking-widest">{calT('empty')}</div>
                     ) : (
-                      dayClasses.map((cls) => (
-                        <div key={cls.class_id} className={`p-4 rounded-2xl border ${isAdmin ? 'bg-stone-50 border-stone-200' : 'bg-stone-100 border-transparent'} transition-all`}>
-                          <p className={`text-sm font-medium ${isAdmin ? 'text-stone-900' : 'text-stone-400 line-through'}`}>
-                            {new Date(cls.start_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          
-                          {isAdmin ? (
-                            <div className="mt-2">
-                              <span className="block text-xs font-mono text-stone-500">{cls.description}</span>
-                              <span className="block text-[10px] uppercase tracking-widest text-amber-600 mt-1 font-semibold">{cls.guests?.name || calT('unknown')}</span>
-                            </div>
-                          ) : (
-                            <div className="mt-1">
-                              <span className="text-[10px] uppercase tracking-widest text-stone-400">{calT('busy')}</span>
-                            </div>
-                          )}
-                        </div>
-                      ))
+                      dayClasses.map((cls) => {
+                        return (
+                          <div key={cls.class_id} className={`p-4 rounded-2xl border ${isAdmin ? 'bg-stone-50 border-stone-200' : 'bg-stone-100 border-transparent'} transition-all`}>
+                            <p className={`text-sm font-medium ${isAdmin ? 'text-stone-900' : 'text-stone-400 line-through'}`}>
+                              {new Date(cls.start_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                            
+                            {isAdmin ? (
+                              <div className="mt-2">
+                                <span className="block text-xs font-mono text-stone-500">{cls.description}</span>
+                                <span className="block text-[10px] uppercase tracking-widest text-amber-600 mt-1 font-semibold">{cls.guests?.name || calT('unknown')}</span>
+                              </div>
+                            ) : (
+                              <div className="mt-1">
+                                <span className="text-[10px] uppercase tracking-widest text-stone-400">{calT('busy')}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </div>
@@ -200,18 +220,32 @@ export default function CalendarPage() {
       </main>
 
       {showAuthModal && (
-        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110]">
           <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl">
-            <h3 className="text-xl font-light mb-6 text-center uppercase tracking-widest">{calT('loginTitle')}</h3>
+            <h3 className="text-xl font-light mb-6 text-center uppercase tracking-widest text-stone-900">{calT('loginTitle')}</h3>
             <form onSubmit={handleAdminLogin} className="space-y-6">
               <div>
-                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-stone-900 bg-transparent" placeholder={calT('username')} required />
+                <input 
+                  type="text" 
+                  value={username} 
+                  onChange={e => setUsername(e.target.value)} 
+                  className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none" 
+                  placeholder={calT('username')} 
+                  required 
+                />
               </div>
               <div>
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-stone-900 bg-transparent tracking-widest" placeholder={calT('password')} required />
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-stone-900 bg-transparent tracking-widest text-stone-900 appearance-none rounded-none" 
+                  placeholder={calT('password')} 
+                  required 
+                />
               </div>
               <div className="flex space-x-3 pt-4">
-                <button type="button" onClick={() => setShowAuthModal(false)} className="flex-1 py-3 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors">{calT('cancel')}</button>
+                <button type="button" onClick={() => setShowAuthModal(false)} className="flex-1 py-3 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors text-stone-900">{calT('cancel')}</button>
                 <button type="submit" className="flex-1 py-3 text-xs bg-stone-900 text-white rounded-full uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-md">{calT('login')}</button>
               </div>
             </form>
