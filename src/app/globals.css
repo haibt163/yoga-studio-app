@@ -34,9 +34,8 @@ nav, button, a, input, select {
 .ios-header-fix {
   -webkit-backdrop-filter: blur(16px) !important;
   backdrop-filter: blur(16px) !important;
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  isolation: isolate;
+  -webkit-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
   background-color: rgba(255, 255, 255, 0.92) !important;
 }
 
