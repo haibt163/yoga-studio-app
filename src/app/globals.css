@@ -20,8 +20,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* FIX: Target specific elements instead of using the * wildcard. 
-   Applying transitions to everything breaks Safari's compositor. */
+/* FIX: Target specific elements. Applying transitions to * breaks Safari */
 a, button, input, select {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, opacity 0.3s ease;
 }
@@ -29,16 +28,6 @@ a, button, input, select {
 ::selection {
   background-color: #e7e5e4; 
   color: #1c1917;
-}
-
-/* --- APPLE SAFARI & IOS FIXES --- */
-.ios-header-fix {
-  -webkit-backdrop-filter: blur(16px) !important;
-  backdrop-filter: blur(16px) !important;
-  /* translate3d forces strict GPU layer rendering on iOS */
-  -webkit-transform: translate3d(0, 0, 0) !important;
-  transform: translate3d(0, 0, 0) !important;
-  background-color: rgba(255, 255, 255, 0.92) !important;
 }
 
 /* Safari Autofill text visibility fix (Mac & iOS) */

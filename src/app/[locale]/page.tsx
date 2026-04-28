@@ -12,8 +12,8 @@ export default async function LandingPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-stone-50 selection:bg-stone-200 text-stone-900">
-      {/* FIX: Removed transition-all, added left-0 right-0, bumped z-[100] */}
-      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),2rem)] pb-6 flex justify-between items-center fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-md border-b border-stone-200/50 ios-header-fix">
+      {/* FIX: Switched from 'fixed' to 'sticky top-0'. Safari natively supports sticky much better. */}
+      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),2rem)] pb-6 flex justify-between items-center sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-stone-200/50">
         <div className="text-2xl tracking-widest font-light uppercase">
           Yoga<span className="font-semibold text-stone-700">Studio</span>
         </div>
@@ -34,7 +34,8 @@ export default async function LandingPage({ params }: PageProps) {
         </div>
       </nav>
 
-      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-48 pb-20 text-center relative overflow-hidden">
+      {/* Adjusted pt-48 to pt-16 since the sticky nav now pushes content down naturally */}
+      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-16 pb-20 text-center relative overflow-hidden">
         <div className="max-w-4xl relative z-10">
           <span className="text-xs uppercase tracking-[0.3em] text-stone-400 font-semibold mb-6 block">
             {locale === 'vi' ? 'Khám phá sự tĩnh tại' : 'Discover tranquility'}
