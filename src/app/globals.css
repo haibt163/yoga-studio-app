@@ -30,6 +30,12 @@ a, button, input, select {
   color: #1c1917;
 }
 
+/* --- APPLE SAFARI & IOS FIXES --- */
+.ios-glass {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+
 /* Safari Autofill text visibility fix (Mac & iOS) */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 

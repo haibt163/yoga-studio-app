@@ -12,30 +12,36 @@ export default async function LandingPage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-stone-50 selection:bg-stone-200 text-stone-900">
-      {/* FIX: Switched from 'fixed' to 'sticky top-0'. Safari natively supports sticky much better. */}
-      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),2rem)] pb-6 flex justify-between items-center sticky top-0 z-[100] bg-white/90 backdrop-blur-md border-b border-stone-200/50">
-        <div className="text-2xl tracking-widest font-light uppercase">
-          Yoga<span className="font-semibold text-stone-700">Studio</span>
-        </div>
+      
+      {/* BULLETPROOF IOS HEADER */}
+      <header className="fixed top-0 left-0 right-0 z-[100] bg-white/90 border-b border-stone-200/50 ios-glass">
+        {/* iOS Safe Area Spacer - natively pushes content down below the notch without breaking CSS math */}
+        <div className="w-full pt-[env(safe-area-inset-top,0px)]"></div>
         
-        <div className="hidden md:flex space-x-12 text-xs tracking-widest text-stone-500 uppercase font-medium">
-          <Link href={`/${locale}/about`} className="hover:text-stone-900 transition-colors">{t('Navigation.about')}</Link>
-          <Link href={`/${locale}/testimonials`} className="hover:text-stone-900 transition-colors">{t('Navigation.testimonials')}</Link>
-          <Link href={`/${locale}/calendar`} className="hover:text-stone-900 transition-colors">{t('Navigation.calendar')}</Link>
-        </div>
+        {/* Navigation Content */}
+        <nav className="w-full max-w-7xl mx-auto px-8 py-5 flex justify-between items-center">
+          <div className="text-2xl tracking-widest font-light uppercase">
+            Yoga<span className="font-semibold text-stone-700">Studio</span>
+          </div>
+          
+          <div className="hidden md:flex space-x-12 text-xs tracking-widest text-stone-500 uppercase font-medium">
+            <Link href={`/${locale}/about`} className="hover:text-stone-900 transition-colors">{t('Navigation.about')}</Link>
+            <Link href={`/${locale}/testimonials`} className="hover:text-stone-900 transition-colors">{t('Navigation.testimonials')}</Link>
+            <Link href={`/${locale}/calendar`} className="hover:text-stone-900 transition-colors">{t('Navigation.calendar')}</Link>
+          </div>
 
-        <div className="flex items-center space-x-6">
-          <Link href={`/${toggleLang}`} className="text-[10px] font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
-            {locale === 'vi' ? 'EN' : 'VN'}
-          </Link>
-          <Link href={`/${locale}/booking`} className="text-[10px] font-bold border border-stone-300 px-6 py-3 rounded-full hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-all uppercase tracking-widest shadow-sm">
-            {t('Navigation.booking')}
-          </Link>
-        </div>
-      </nav>
+          <div className="flex items-center space-x-6">
+            <Link href={`/${toggleLang}`} className="text-[10px] font-bold uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
+              {locale === 'vi' ? 'EN' : 'VN'}
+            </Link>
+            <Link href={`/${locale}/booking`} className="text-[10px] font-bold border border-stone-300 px-6 py-3 rounded-full hover:bg-stone-900 hover:text-white hover:border-stone-900 transition-all uppercase tracking-widest shadow-sm">
+              {t('Navigation.booking')}
+            </Link>
+          </div>
+        </nav>
+      </header>
 
-      {/* Adjusted pt-48 to pt-16 since the sticky nav now pushes content down naturally */}
-      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-16 pb-20 text-center relative overflow-hidden">
+      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-48 pb-20 text-center relative overflow-hidden">
         <div className="max-w-4xl relative z-10">
           <span className="text-xs uppercase tracking-[0.3em] text-stone-400 font-semibold mb-6 block">
             {locale === 'vi' ? 'Khám phá sự tĩnh tại' : 'Discover tranquility'}
