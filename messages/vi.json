@@ -9,12 +9,21 @@
     "title": "Tìm Lại Sự Cân Bằng",
     "subtitle": "Không gian yoga tối giản dành cho sự tập trung và an tĩnh."
   },
+  "Quote": {
+    "text": "\"Yoga là ánh sáng, một khi đã được thắp lên thì không bao giờ tắt, bạn càng thực hành tốt, ngọn lửa ấy sẽ càng rực sáng hơn.\"",
+    "author": "(B.K.S Iyengar)"
+  },
   "Booking": {
     "title": "Cổng Đặt Lịch",
     "subtitle": "Vui lòng nhập ID và mã PIN 6 số của bạn.",
     "guestId": "ID Học Viên",
     "pin": "Mã PIN (6 số)",
-    "login": "Đăng Nhập"
+    "login": "Đăng Nhập",
+    "newCustomer": "Học viên mới? Vui lòng nhập",
+    "newGuestId": "CN000",
+    "newPin": "123456",
+    "asPin": "làm mã PIN để đặt lịch buổi đầu tiên.",
+    "contactAfter": "Quét mã QR bên dưới để liên hệ sau khi đặt lịch thành công:"
   },
   "Dashboard": {
     "welcome": "Chào mừng",
@@ -24,57 +33,46 @@
     "cancel": "Hủy",
     "confirmCancel": "Bạn có chắc chắn muốn hủy lịch này không?",
     "logout": "Đăng xuất",
-    "loading": "Đang tải dữ liệu..."
-  },
-  "Admin": {
-    "title": "Bảng Điều Khiển",
-    "schedule": "Quản lý Lịch tập",
-    "totalBookings": "Tổng cộng",
-    "pendingRequests": "yêu cầu chờ duyệt",
-    "date": "Ngày / Khung giờ",
-    "student": "Học viên",
-    "classCode": "Mã Lớp",
-    "status": "Trạng thái",
-    "action": "Thao tác",
-    "approve": "Duyệt",
-    "approved": "Đã duyệt",
-    "loading": "Đang tải dữ liệu..."
-  },
-  "Calendar": {
-    "title": "Lịch Tuần Này",
-    "subtitle": "Xem nhanh các khung giờ và đồng bộ lên điện thoại.",
-    "sync": "Đồng bộ Apple Calendar",
-    "loading": "Đang tải lịch...",
-    "empty": "Trống",
-    "busy": "Đã Kín",
-    "adminOn": "Thoát Admin",
-    "adminOff": "Admin",
-    "loginTitle": "Đăng nhập Admin",
-    "username": "Tài khoản",
-    "password": "Mật khẩu",
-    "cancel": "Hủy",
-    "login": "Đăng nhập",
-    "unknown": "Khách"
+    "loading": "Đang tải dữ liệu...",
+    "bookNew": "Đặt Lịch Mới",
+    "pending": "Chờ duyệt"
   },
   "About": {
-    "title": "Hành Trình Của Tôi",
-    "subtitle": "Truyền cảm hứng, nuôi dưỡng sự cân bằng.",
-    "p1": "Tôi là một huấn luyện viên yoga tận tâm với hơn 8 năm kinh nghiệm giảng dạy tại các trung tâm yoga hàng đầu. Tôi tin rằng yoga là một hành trình mang tính cá nhân cao.",
-    "p2": "Trước khi cống hiến cho yoga, tôi đã có thời gian dài làm việc trong ngành nhà hàng khách sạn và bảo hiểm. Nền tảng này giúp tôi thấm nhuần tư duy hướng tới sự xuất sắc, thấu hiểu và làm hài lòng khách hàng.",
-    "p3": "Hiện tại, bên cạnh việc dạy tại trung tâm, tôi cung cấp các lớp học 1-kèm-1 riêng biệt. Học viên của tôi thường là những người bận rộn hoặc muốn cải thiện kỹ năng nhanh chóng, và họ tìm đến tôi hoàn toàn qua sự giới thiệu truyền miệng."
+    "title": "Hành Trình",
+    "subtitle": "Từ dịch vụ khách hàng đến sự an tĩnh trong tâm trí.",
+    "p1": "Tôi là Chang. Phương pháp tiếp cận yoga của tôi bắt nguồn từ niềm tin rằng yoga là một hành trình mang tính cá nhân cao.",
+    "p2": "Trước khi dành trọn thời gian cho yoga, tôi đã làm việc sâu rộng trong ngành nhà hàng khách sạn và bảo hiểm. Nền tảng này giúp tôi thấm nhuần tư duy hướng tới sự xuất sắc, thấu hiểu và làm hài lòng khách hàng.",
+    "p3": "Hiện tại, bên cạnh việc dạy tại trung tâm, tôi cung cấp các lớp học 1-kèm-1 riêng biệt (chỉ dành cho nữ). Học viên của tôi thường là những người bận rộn hoặc muốn cải thiện kỹ năng nhanh chóng, và họ tìm đến tôi hoàn toàn qua sự giới thiệu truyền miệng."
   },
   "Testimonials": {
     "title": "Cảm Nhận",
     "subtitle": "Đánh giá từ học viên cá nhân và đối tác trung tâm.",
     "r1": "Các buổi tập riêng của cô ấy thực sự tạo ra sự khác biệt. Dù lịch trình của tôi rất lộn xộn, cô ấy luôn biết cách điều chỉnh bài tập để giúp tôi xả stress và tăng cường thể lực.",
-    "a1": "Sarah M. (Học viên cá nhân)",
+    "a1": "Học Viên Cá Nhân 1",
     "r2": "Một người vô cùng chuyên nghiệp. Kinh nghiệm chăm sóc khách hàng của cô ấy thể hiện rõ qua cách cô ấy thấu hiểu những gì học viên cần.",
-    "a2": "David L. (Học viên cá nhân)",
+    "a2": "Học Viên Cá Nhân 2",
     "r3": "Tôi đã cải thiện tư thế của mình trong 3 tháng học riêng nhiều hơn hẳn 2 năm tập lớp đông người.",
-    "a3": "Elena T. (Học viên cá nhân)",
+    "a3": "Học Viên Cá Nhân 3",
     "r4": "Luôn là một trong những huấn luyện viên được đánh giá cao nhất tại trung tâm của chúng tôi. Lớp học của cô luôn kín chỗ và năng lượng vô cùng tuyệt vời.",
-    "a4": "Quản lý CITIGYM",
-    "r5": "Một huấn luyện viên đáng tin cậy, kiến thức sâu rộng và luôn mang đến trải nghiệm chăm sóc chuẩn mực, cao cấp cho các chương trình sức khỏe của chúng tôi.",
-    "a5": "Trung tâm Estella"
+    "a4": "Citigym",
+    "r5": "Một huấn luyện viên đáng tin cậy, kiến thức sâu rộng, mang đến trải nghiệm cao cấp, chuyên nghiệp cho các chương trình sức khỏe của chúng tôi.",
+    "a5": "Estella Centre"
+  },
+  "Calendar": {
+    "title": "Lịch Tập / Schedule",
+    "subtitle": "Xem và đăng ký lịch tập Yoga 1 kèm 1",
+    "adminOn": "Quyền Admin",
+    "adminOff": "Đăng Nhập Admin",
+    "sync": "Đồng Bộ Mac",
+    "loading": "Đang tải lịch tập...",
+    "unknown": "Không rõ",
+    "busy": "Kín Lịch",
+    "empty": "Chưa có lịch tập.",
+    "loginTitle": "Xác Thực Admin",
+    "username": "Tên đăng nhập",
+    "password": "Mật khẩu",
+    "cancel": "Hủy",
+    "login": "Đăng Nhập",
+    "book": "Đặt Lịch"
   }
 }

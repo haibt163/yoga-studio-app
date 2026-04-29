@@ -17,7 +17,7 @@ export async function GET() {
     const supabase = createClient(supabaseUrl, supabaseKey);
     const today = new Date().toISOString().split('T')[0];
     
-    // FIX: Fetch classes and guests separately to avoid PGRST200
+    // Fetch classes and guests separately to avoid PGRST200
     const { data: classData, error: classError } = await supabase
       .from('classes')
       .select('*')
@@ -39,12 +39,15 @@ export async function GET() {
       guests: { name: guestMap.get(cls.guest_id?.trim()) || 'Unknown' }
     }));
 
+    // ADDED: Auto-refresh instructions for Mac/iOS Calendar (15 Minute TTL)
     let icsString = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//YogaStudio//Calendar//VI',
+      'PRODID:-//Yoga x Chang//Calendar//VI',
       'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH'
+      'METHOD:PUBLISH',
+      'X-PUBLISHED-TTL:PT15M',
+      'REFRESH-INTERVAL;VALUE=DURATION:PT15M'
     ].join('\r\n') + '\r\n';
 
     safeClasses.forEach((cls) => {

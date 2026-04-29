@@ -22,6 +22,14 @@ export default function CalendarPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
+  // Admin New Booking State
+  const [showAdminBookModal, setShowAdminBookModal] = useState(false);
+  const [bookDate, setBookDate] = useState('');
+  const [bookTime, setBookTime] = useState('');
+  const [bookGuestId, setBookGuestId] = useState('');
+  const [bookPin, setBookPin] = useState(''); // <-- Changed from bookName
+  const [bookLoading, setBookLoading] = useState(false);
+
   const next7Days = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
@@ -31,75 +39,62 @@ export default function CalendarPage() {
     });
   }, []);
 
+  const fetchCalendar = async () => {
+    setLoading(true);
+    const startOfToday = new Date(next7Days[0]);
+    const endOfNextWeek = new Date(next7Days[6]);
+    endOfNextWeek.setHours(23, 59, 59, 999);
+
+    const { data: bookingData, error: bookingError } = await supabase
+      .from('bookings')
+      .select('id, name, guest_id, status, booking_date, classes(description, start_time)')
+      .gte('booking_date', startOfToday.toISOString().split('T')[0])
+      .lte('booking_date', endOfNextWeek.toISOString().split('T')[0])
+      .order('booking_date', { ascending: true });
+
+    if (bookingError) {
+      console.error("Fetch Calendar Error:", bookingError);
+      setLoading(false);
+      return;
+    }
+
+    const confirmedBookings = (bookingData || []).filter(b => 
+      b.status && (b.status.toLowerCase().includes('confirmed') || b.status.toLowerCase().includes('pending'))
+    );
+
+    const mappedClasses = confirmedBookings.map(b => {
+      const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+      const isPending = b.status?.toLowerCase().includes('pending');
+      
+      let timeString = '00:00';
+      if (b.status?.includes(':')) {
+         timeString = b.status.split(':')[1].trim();
+      } else if (classItem?.start_time) {
+         const match = classItem.start_time.match(/(\d{2}:\d{2})/);
+         if (match) timeString = match[1];
+      }
+
+      return {
+        class_id: b.id,
+        raw_date: b.booking_date,
+        time_string: timeString,
+        description: classItem?.description || 'Custom',
+        guests: { name: b.name || b.guest_id },
+        isPending
+      };
+    });
+
+    setClasses(mappedClasses);
+    setLoading(false);
+  };
+
   useEffect(() => {
     setIsClient(true);
     if (typeof window !== 'undefined' && sessionStorage.getItem('studio_admin_auth') === 'true') {
       setIsAdmin(true);
     }
-
-    async function fetchCalendar() {
-      const startOfToday = new Date(next7Days[0]);
-      const endOfNextWeek = new Date(next7Days[6]);
-      endOfNextWeek.setHours(23, 59, 59, 999);
-
-      // FIX: Use the exact working query structure from the Admin page to avoid Supabase errors.
-      // Removed 'duration' to prevent Foreign Key missing column crashes.
-      const { data: bookingData, error: bookingError } = await supabase
-        .from('bookings')
-        .select('id, name, guest_id, status, booking_date, classes(description, start_time)')
-        .gte('booking_date', startOfToday.toISOString().split('T')[0])
-        .lte('booking_date', endOfNextWeek.toISOString().split('T')[0])
-        .order('booking_date', { ascending: true });
-
-      if (bookingError) {
-        console.error("Supabase Error Details:", bookingError.message, bookingError.details);
-        setLoading(false);
-        return;
-      }
-
-      // Safely filter for Confirmed statuses in JavaScript to avoid PostgREST syntax issues
-      const confirmedBookings = (bookingData || []).filter(b => 
-        b.status && b.status.toLowerCase().includes('confirmed')
-      );
-
-      // Map bookings back into the exact shape your UI expects
-      const mappedClasses = confirmedBookings.map(b => {
-        const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
-        
-        let timeString = '00:00';
-        if (b.status?.includes(':')) {
-           timeString = b.status.split(':')[1].trim();
-        } else if (classItem?.start_time) {
-           const match = classItem.start_time.match(/(\d{2}:\d{2})/);
-           if (match) timeString = match[1];
-        }
-
-        // Create a full ISO string (e.g. "2026-05-04T17:45:00") so your getClassesForDay logic works perfectly
-        const fakeStartTime = `${b.booking_date}T${timeString}:00`;
-
-        return {
-          class_id: b.id,
-          start_time: fakeStartTime, 
-          description: classItem?.description || 'Custom',
-          duration: 60, // Safely fallback to 60 minutes
-          guests: { name: b.name || b.guest_id }
-        };
-      });
-
-      setClasses(mappedClasses);
-      setLoading(false);
-    }
     fetchCalendar();
-  }, [supabase, next7Days, calT]);
-
-  const getClassesForDay = (targetDate: Date) => {
-    const targetYear = targetDate.getFullYear();
-    const targetMonth = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const targetDay = String(targetDate.getDate()).padStart(2, '0');
-    const targetLocalString = `${targetYear}-${targetMonth}-${targetDay}`;
-
-    return classes.filter(cls => cls.start_time.startsWith(targetLocalString));
-  };
+  }, [supabase, next7Days]);
 
   // --- HANDLERS ---
   const handleAdminLogin = (e: React.FormEvent) => {
@@ -111,7 +106,7 @@ export default function CalendarPage() {
       setUsername('');
       setPassword('');
     } else {
-      alert('Invalid credentials');
+      alert('Invalid credentials / Sai mật khẩu');
     }
   };
 
@@ -123,20 +118,60 @@ export default function CalendarPage() {
   const handleSyncCalendar = () => {
     const currentHost = window.location.host;
     const protocol = window.location.protocol === 'https:' ? 'webcal://' : 'http://';
-    window.location.href = `${protocol}${currentHost}/api/calendar/feed`;
+    window.location.href = `${protocol}${currentHost}/api/calendar/feed?nocache=${Date.now()}`;
+  };
+
+  const openAdminBookModal = (dateStr: string, timeStr: string) => {
+    setBookDate(dateStr);
+    setBookTime(timeStr);
+    setBookGuestId('');
+    setBookPin('');
+    setShowAdminBookModal(true);
+  };
+
+  const handleAdminBookSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBookLoading(true);
+
+    // 1. Verify Guest ID and PIN with Supabase
+    const { data: guestData, error: guestError } = await supabase
+      .from('guests')
+      .select('name')
+      .eq('guest_id', bookGuestId.trim())
+      .eq('pin', bookPin.trim())
+      .single();
+
+    if (guestError || !guestData) {
+      alert(locale === 'vi' ? 'Sai ID hoặc mã PIN của học viên' : 'Invalid Guest ID or PIN');
+      setBookLoading(false);
+      return;
+    }
+
+    // 2. Insert using the verified guest's name
+    await supabase.from('bookings').insert([{
+      guest_id: bookGuestId.trim(),
+      name: guestData.name,
+      booking_date: bookDate,
+      status: `Confirmed: ${bookTime}`
+    }]);
+    
+    setShowAdminBookModal(false);
+    setBookLoading(false);
+    fetchCalendar(); 
   };
 
   if (!isClient) return null;
 
   return (
-    <div className="min-h-screen pb-20 bg-stone-50 font-sans">
+    <div className="min-h-screen pb-20 bg-stone-50 font-sans selection:bg-rose-200">
+      
       <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),1.5rem)] pb-6 flex justify-between items-center border-b border-stone-200/50 bg-white/90 backdrop-blur-md sticky top-0 z-50 transition-all ios-header-fix">
         <Link href={`/${locale}`} className="text-xl tracking-widest font-light uppercase text-stone-900">
-          Yoga<span className="font-semibold text-stone-700">Studio</span>
+          Yoga<span className="font-semibold text-rose-700"> x Chang</span>
         </Link>
         <div className="flex space-x-6 items-center">
            {isAdmin ? (
-             <button onClick={handleAdminLogout} className="text-[10px] text-stone-400 hover:text-stone-900 transition-colors uppercase tracking-widest font-bold">
+             <button onClick={handleAdminLogout} className="text-[10px] text-stone-400 hover:text-rose-700 transition-colors uppercase tracking-widest font-bold">
                {calT('adminOn')}
              </button>
            ) : (
@@ -144,7 +179,7 @@ export default function CalendarPage() {
                {calT('adminOff')}
              </button>
            )}
-          <Link href={`/${locale}/booking`} className="text-xs uppercase tracking-widest text-stone-500 hover:text-stone-900 transition-colors">
+          <Link href={`/${locale}/booking`} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
             {navT('booking')}
           </Link>
         </div>
@@ -170,14 +205,51 @@ export default function CalendarPage() {
         ) : (
           <div className="flex md:grid md:grid-cols-7 overflow-x-auto gap-4 pb-8 snap-x scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0">
             {next7Days.map((day, i) => {
-              const dayClasses = getClassesForDay(day);
+              const targetYear = day.getFullYear();
+              const targetMonth = String(day.getMonth() + 1).padStart(2, '0');
+              const targetDay = String(day.getDate()).padStart(2, '0');
+              const targetLocalString = `${targetYear}-${targetMonth}-${targetDay}`;
+              
+              const dayClasses = classes.filter(cls => cls.raw_date === targetLocalString);
+              const bookedTimes = dayClasses.map(cls => cls.time_string);
+              
+              // --- DAY OF WEEK LOGIC INTEGRATED HERE ---
+              const dayOfWeek = day.getDay();
+              let possibleSlots: string[] = [];
+              if (dayOfWeek === 1) possibleSlots = ["08:00", "09:00"];
+              else if (dayOfWeek === 2) possibleSlots = ["06:00", "07:00"];
+              else if (dayOfWeek === 4 || dayOfWeek === 6) possibleSlots = ["16:00"];
+              else if (dayOfWeek === 0) possibleSlots = ["09:30"];
+
+              const now = new Date();
+              const targetDateIsToday = targetLocalString === now.toISOString().split('T')[0];
+              const currentHourDecimal = now.getHours() + (now.getMinutes() / 60);
+
+              const vacantSlots = possibleSlots.filter(s => {
+                  if (bookedTimes.includes(s)) return false;
+                  if (targetDateIsToday) {
+                      const [h, min] = s.split(':').map(Number);
+                      if ((h + (min / 60)) <= currentHourDecimal) return false;
+                  }
+                  return true;
+              });
+
+              // Combine BOTH sets into one array for Chronological Sorting
+              const allDaySlots = [
+                  ...dayClasses.map(cls => ({ ...cls, isVacant: false })),
+                  ...vacantSlots.map(slot => ({ isVacant: true, time_string: slot, class_id: `vacant_${slot}` }))
+              ];
+
+              allDaySlots.sort((a, b) => a.time_string.localeCompare(b.time_string));
+
+              const visibleSlots = allDaySlots.filter(s => isAdmin || !s.isVacant);
               const isToday = i === 0;
 
               return (
-                <div key={i} className={`flex-none w-[260px] md:w-auto flex flex-col bg-white rounded-3xl border ${isToday ? 'border-stone-900 shadow-md relative' : 'border-stone-100 shadow-sm'} overflow-hidden snap-center`}>
-                  {isToday && <div className="absolute top-0 left-0 w-full h-1 bg-stone-900"></div>}
+                <div key={i} className={`flex-none w-[260px] md:w-auto flex flex-col bg-white rounded-3xl border ${isToday ? 'border-rose-700 shadow-md relative' : 'border-stone-100 shadow-sm'} overflow-hidden snap-center`}>
+                  {isToday && <div className="absolute top-0 left-0 w-full h-1 bg-rose-700"></div>}
                   
-                  <div className={`p-5 text-center border-b ${isToday ? 'bg-stone-50/50' : 'border-stone-50'}`}>
+                  <div className={`p-5 text-center border-b ${isToday ? 'bg-rose-50/50' : 'border-stone-50'}`}>
                     <span className="block text-[10px] uppercase tracking-widest text-stone-400 font-bold mb-1">
                       {day.toLocaleDateString(locale, { weekday: 'short' })}
                     </span>
@@ -187,20 +259,37 @@ export default function CalendarPage() {
                   </div>
 
                   <div className="p-4 space-y-3 flex-grow bg-stone-50/20">
-                    {dayClasses.length === 0 ? (
-                      <div className="h-full min-h-[120px] flex items-center justify-center text-[10px] text-stone-300 uppercase tracking-widest">{calT('empty')}</div>
+                    
+                    {visibleSlots.length === 0 ? (
+                      <div className="h-full min-h-[120px] flex items-center justify-center text-[10px] text-stone-300 uppercase tracking-widest">
+                        {possibleSlots.length === 0 ? "Off day" : calT('empty')}
+                      </div>
                     ) : (
-                      dayClasses.map((cls) => {
+                      visibleSlots.map((slotObj) => {
+                        // Render Admin Vacant Spots
+                        if (slotObj.isVacant) {
+                           return (
+                            <div key={slotObj.class_id} className="p-3 rounded-2xl border border-dashed border-stone-300 bg-transparent flex justify-between items-center group hover:border-rose-400 transition-colors">
+                              <span className="text-sm font-medium text-stone-400">{slotObj.time_string}</span>
+                              <button onClick={() => openAdminBookModal(targetLocalString, slotObj.time_string)} className="text-[10px] uppercase tracking-widest text-rose-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1 bg-rose-50 rounded-full">
+                                {calT('book')}
+                              </button>
+                            </div>
+                          );
+                        } 
+                        
+                        // Render Confirmed/Pending Bookings
                         return (
-                          <div key={cls.class_id} className={`p-4 rounded-2xl border ${isAdmin ? 'bg-stone-50 border-stone-200' : 'bg-stone-100 border-transparent'} transition-all`}>
-                            <p className={`text-sm font-medium ${isAdmin ? 'text-stone-900' : 'text-stone-400 line-through'}`}>
-                              {new Date(cls.start_time).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })}
+                          <div key={slotObj.class_id} className={`p-4 rounded-2xl border ${isAdmin ? 'bg-stone-50 border-stone-200' : 'bg-stone-100 border-transparent'} ${slotObj.isPending ? 'border-amber-200 bg-amber-50/30' : ''} transition-all`}>
+                            <p className={`text-sm font-medium flex justify-between items-center ${isAdmin ? 'text-stone-900' : 'text-stone-400 line-through'}`}>
+                              <span>{slotObj.time_string}</span>
+                              {slotObj.isPending && isAdmin && <span className="text-[9px] text-amber-600 font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-100">Pending</span>}
                             </p>
                             
                             {isAdmin ? (
                               <div className="mt-2">
-                                <span className="block text-xs font-mono text-stone-500">{cls.description}</span>
-                                <span className="block text-[10px] uppercase tracking-widest text-amber-600 mt-1 font-semibold">{cls.guests?.name || calT('unknown')}</span>
+                                <span className="block text-xs font-mono text-stone-500">{slotObj.description}</span>
+                                <span className="block text-[10px] uppercase tracking-widest text-rose-600 mt-1 font-semibold">{slotObj.guests?.name || calT('unknown')}</span>
                               </div>
                             ) : (
                               <div className="mt-1">
@@ -219,34 +308,47 @@ export default function CalendarPage() {
         )}
       </main>
 
+      {/* --- MODALS --- */}
       {showAuthModal && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110]">
           <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl">
             <h3 className="text-xl font-light mb-6 text-center uppercase tracking-widest text-stone-900">{calT('loginTitle')}</h3>
             <form onSubmit={handleAdminLogin} className="space-y-6">
               <div>
-                <input 
-                  type="text" 
-                  value={username} 
-                  onChange={e => setUsername(e.target.value)} 
-                  className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none" 
-                  placeholder={calT('username')} 
-                  required 
-                />
+                <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-rose-700 bg-transparent text-stone-900 appearance-none rounded-none" placeholder={calT('username')} required />
               </div>
               <div>
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-stone-900 bg-transparent tracking-widest text-stone-900 appearance-none rounded-none" 
-                  placeholder={calT('password')} 
-                  required 
-                />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-rose-700 bg-transparent tracking-widest text-stone-900 appearance-none rounded-none" placeholder={calT('password')} required />
               </div>
               <div className="flex space-x-3 pt-4">
                 <button type="button" onClick={() => setShowAuthModal(false)} className="flex-1 py-3 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors text-stone-900">{calT('cancel')}</button>
-                <button type="submit" className="flex-1 py-3 text-xs bg-stone-900 text-white rounded-full uppercase tracking-widest hover:bg-stone-800 transition-colors shadow-md">{calT('login')}</button>
+                <button type="submit" className="flex-1 py-3 text-xs bg-rose-800 text-white rounded-full uppercase tracking-widest hover:bg-rose-900 transition-colors shadow-md">{calT('login')}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAdminBookModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[110]">
+          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl">
+            <h3 className="text-xl font-light mb-2 text-stone-900">Add Booking</h3>
+            <p className="text-sm text-stone-500 mb-6">{bookDate} at {bookTime}</p>
+            <form onSubmit={handleAdminBookSubmit} className="space-y-6">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Guest ID</label>
+                <input type="text" value={bookGuestId} onChange={e => setBookGuestId(e.target.value)} className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-rose-700 text-stone-900" placeholder="e.g. CN012" required />
+              </div>
+              <div>
+                {/* Changed to Guest PIN */}
+                <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-1">Guest PIN</label>
+                <input type="password" value={bookPin} onChange={e => setBookPin(e.target.value)} maxLength={6} className="w-full border-b border-stone-300 py-2 text-sm focus:outline-none focus:border-rose-700 text-stone-900 tracking-widest" placeholder="••••••" required />
+              </div>
+              <div className="flex space-x-3 pt-4">
+                <button type="button" onClick={() => setShowAdminBookModal(false)} className="flex-1 py-3 text-xs border border-stone-200 rounded-full uppercase tracking-widest text-stone-900 hover:bg-stone-50">Cancel</button>
+                <button type="submit" disabled={bookLoading} className="flex-1 py-3 text-xs bg-rose-800 text-white rounded-full uppercase tracking-widest hover:bg-rose-900 shadow-md">
+                  {bookLoading ? '...' : 'Confirm'}
+                </button>
               </div>
             </form>
           </div>

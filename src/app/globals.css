@@ -20,23 +20,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* FIX: Target specific elements. Applying transitions to * breaks Safari */
 a, button, input, select {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, opacity 0.3s ease;
 }
 
+/* FIRE SIGN THEME: Warm rose selection color */
 ::selection {
-  background-color: #e7e5e4; 
-  color: #1c1917;
+  background-color: #fecdd3; /* Rose 200 */
+  color: #881337; /* Rose 900 */
 }
 
-/* --- APPLE SAFARI & IOS FIXES --- */
 .ios-glass {
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 
-/* Safari Autofill text visibility fix (Mac & iOS) */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
@@ -44,4 +42,17 @@ input:-webkit-autofill:active {
     -webkit-text-fill-color: #1c1917 !important;
     -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
     transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Force high-quality rendering for Vietnamese diacritics */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* Ensure italics don't break the kerning of accent marks */
+i, .italic {
+  font-style: italic;
+  font-synthesis: none; /* Stops the browser from "faking" italics */
 }

@@ -21,8 +21,9 @@ export default function BookingPage() {
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   
-  // Rescheduling State
+  // Rescheduling / New Booking State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isNewBooking, setIsNewBooking] = useState(false);
   const [bookingToReschedule, setBookingToReschedule] = useState<any>(null);
   const [selectedNewDate, setSelectedNewDate] = useState<string>('');
   const [selectedNewTime, setSelectedNewTime] = useState<string>('');
@@ -32,253 +33,314 @@ export default function BookingPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginLoading(true);
-    const { data, error } = await supabase.from('guests').select('*').eq('guest_id', guestId.trim()).eq('pin', pin.trim()).single();
-    if (!error && data) setLoggedInGuest(data);
-    else alert('Sai ID hoặc PIN / Incorrect credentials');
+    const { data, error } = await supabase
+      .from('guests')
+      .select('*')
+      .eq('guest_id', guestId.trim())
+      .eq('pin', pin.trim())
+      .single();
+
+    if (error || !data) {
+      alert(locale === 'vi' ? 'Sai ID hoặc mã PIN' : 'Invalid ID or PIN');
+    } else {
+      setLoggedInGuest(data);
+    }
     setLoginLoading(false);
   };
 
-  // 2. Fetch User Dashboard Data
   useEffect(() => {
-    if (!loggedInGuest) return;
-    async function loadDashboard() {
-      const { data: bData } = await supabase
-        .from('bookings')
-        .select('id, booking_date, status, classes (description, start_time)')
-        .eq('guest_id', loggedInGuest.guest_id)
-        .gte('booking_date', new Date().toISOString().split('T')[0])
-        .order('booking_date', { ascending: true });
-        
-      if (bData) setBookings(bData);
-      setDashboardLoading(false);
-    }
-    loadDashboard();
+    if (loggedInGuest) fetchGuestDashboard();
   }, [loggedInGuest, supabase]);
 
-  // 3. Real-Time Vacancy Checker (The Collision Detector)
-  useEffect(() => {
-    if (!selectedNewDate) {
-      setTakenSlots([]);
-      return;
-    }
-    async function checkVacancies() {
-      const { data } = await supabase
-        .from('bookings')
-        .select('classes(start_time)')
-        .eq('booking_date', selectedNewDate);
-        
-      if (data) {
-        const blockedTimes = data
-          .filter(b => b.classes) 
-          .map(b => {
-             // FIX: Safely handle classes as either an object or an array
-             const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
-             
-             if (!classItem?.start_time) return null;
+  const fetchGuestDashboard = async () => {
+    setDashboardLoading(true);
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: bData } = await supabase
+      .from('bookings')
+      .select('id, guest_id, status, booking_date, classes(description, start_time)')
+      .eq('guest_id', loggedInGuest.guest_id)
+      .gte('booking_date', today)
+      .order('booking_date', { ascending: true });
 
-             // FIX: Use regex to extract time string safely (avoids Safari Invalid Date crash)
-             const timeMatch = classItem.start_time.match(/(\d{2}:\d{2})/);
-             return timeMatch ? timeMatch[1] : null;
-          })
-          .filter(Boolean) as string[];
-          
-        setTakenSlots(blockedTimes);
+    // Fetch all bookings for collision detection
+    const { data: allBData } = await supabase
+      .from('bookings')
+      .select('booking_date, status, classes(start_time)')
+      .gte('booking_date', today);
+
+    const taken = (allBData || []).map(b => {
+      let time = '';
+      if (b.status?.includes(':')) {
+        time = b.status.split(':')[1].trim();
+      } else if (b.classes) {
+        const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+        const timeMatch = classItem?.start_time?.match(/(\d{2}:\d{2})/);
+        if (timeMatch) time = timeMatch[1];
       }
-    }
-    checkVacancies();
-  }, [selectedNewDate, supabase]);
+      return `${b.booking_date}_${time}`;
+    });
 
-  // 4. Actions
-  const handleCancel = async (id: string) => {
-    if (!confirm(dashboardT('confirmCancel'))) return;
-    const { error } = await supabase.from('bookings').delete().eq('id', id);
-    if (!error) setBookings(bookings.filter(b => b.id !== id));
+    setTakenSlots(taken);
+    setBookings(bData || []);
+    setDashboardLoading(false);
   };
 
-  const openReschedule = (booking: any) => {
+  const handleCancelBooking = async (bookingId: string) => {
+    if (confirm(dashboardT('confirmCancel'))) {
+      await supabase.from('bookings').update({ status: 'Cancelled' }).eq('id', bookingId);
+      fetchGuestDashboard();
+    }
+  };
+
+  const openRescheduleModal = (booking: any) => {
+    setIsNewBooking(false);
     setBookingToReschedule(booking);
     setSelectedNewDate('');
     setSelectedNewTime('');
     setIsModalOpen(true);
   };
 
-  const submitReschedule = async () => {
-    if (!selectedNewDate || !selectedNewTime) return alert("Vui lòng chọn ngày và giờ / Please select date & time");
-    setRescheduleLoading(true);
-    
-    const { error } = await supabase.from('bookings')
-      .update({ 
-         status: `Pending: ${selectedNewTime}`, 
-         booking_date: selectedNewDate 
-      })
-      .eq('id', bookingToReschedule.id);
-      
-    if (!error) {
-      alert("Đã gửi yêu cầu đổi lịch / Request sent");
-      setBookings(bookings.map(b => b.id === bookingToReschedule.id ? { ...b, status: `Pending: ${selectedNewTime}`, booking_date: selectedNewDate } : b));
-      setIsModalOpen(false);
-    } else {
-      alert("Lỗi / Error processing request");
-    }
-    setRescheduleLoading(false);
+  const openNewBookingModal = () => {
+    setIsNewBooking(true);
+    setBookingToReschedule(null);
+    setSelectedNewDate('');
+    setSelectedNewTime('');
+    setIsModalOpen(true);
   };
 
-  // --- FLEXIBLE SLOT GENERATOR ---
-  const next30Days = Array.from({length: 30}, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + (i + 1));
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const submitBookingModal = async () => {
+    setRescheduleLoading(true);
+    
+    if (isNewBooking) {
+      await supabase.from('bookings').insert([{
+        guest_id: loggedInGuest.guest_id,
+        name: loggedInGuest.name,
+        booking_date: selectedNewDate,
+        status: `Pending: ${selectedNewTime}`,
+      }]);
+    } else {
+      await supabase.from('bookings')
+        .update({ 
+          booking_date: selectedNewDate, 
+          status: `Pending: ${selectedNewTime}` 
+        })
+        .eq('id', bookingToReschedule.id);
+    }
+    
+    setIsModalOpen(false);
+    setRescheduleLoading(false);
+    fetchGuestDashboard();
+  };
+
+  const next30Days = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(); 
+    d.setDate(d.getDate() + i);
+    return d.toISOString().split('T')[0];
   });
 
-  const getAvailableTimeSlots = (dateString: string) => {
-    if (!dateString) return [];
+  // --- YOUR EXACT DAY-OF-WEEK LOGIC ---
+  const availableSlots = useMemo(() => {
+    if (!selectedNewDate) return [];
     
-    const [y, m, d] = dateString.split('-');
+    const [y, m, d] = selectedNewDate.split('-');
     const dayOfWeek = new Date(Number(y), Number(m)-1, Number(d)).getDay(); 
     
     let possibleSlots: string[] = [];
-
     if (dayOfWeek === 1) possibleSlots = ["08:00", "09:00"];
     else if (dayOfWeek === 2) possibleSlots = ["06:00", "07:00"];
     else if (dayOfWeek === 4 || dayOfWeek === 6) possibleSlots = ["16:00"];
     else if (dayOfWeek === 0) possibleSlots = ["09:30"];
+    
+    const takenForSelectedDate = takenSlots
+      .filter(t => t.startsWith(selectedNewDate))
+      .map(t => t.split('_')[1]);
 
-    return possibleSlots.filter(slot => !takenSlots.includes(slot));
-  };
+    const now = new Date();
+    const tzOffset = now.getTimezoneOffset() * 60000;
+    const localNow = new Date(now.getTime() - tzOffset);
+    const todayStr = localNow.toISOString().split('T')[0];
 
-  const availableSlots = getAvailableTimeSlots(selectedNewDate);
+    const isToday = selectedNewDate === todayStr;
+    const currentHourDecimal = now.getHours() + (now.getMinutes() / 60);
 
-  // Helper for safe time extraction in UI
-  const extractTime = (classesObj: any) => {
+    return possibleSlots.filter(slot => {
+      if (takenForSelectedDate.includes(slot)) return false;
+      
+      if (isToday) {
+        const [h, min] = slot.split(':').map(Number);
+        if ((h + (min / 60)) <= currentHourDecimal) return false;
+      }
+      return true;
+    });
+  }, [selectedNewDate, takenSlots]);
+
+  const extractTime = (classesObj: any, statusStr: string) => {
+    if (statusStr?.includes(':')) return statusStr.split(':')[1].trim();
     const data = Array.isArray(classesObj) ? classesObj[0] : classesObj;
     if (!data?.start_time) return '';
     const match = data.start_time.match(/(\d{2}:\d{2})/);
     return match ? match[1] : '';
   };
 
-  // ==========================================
-  // VIEW 1: LOGIN FORM
-  // ==========================================
   if (!loggedInGuest) {
     return (
-       <div className="min-h-screen flex flex-col items-center justify-center px-6 pt-[env(safe-area-inset-top)]">
-        <Link href={`/${locale}`} className="mb-8 text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
-          ← {locale === 'vi' ? 'Quay lại' : 'Go Back'}
-        </Link>
-        <div className="w-full max-w-md bg-white/80 backdrop-blur-xl p-10 shadow-2xl shadow-stone-200/50 border border-stone-100 rounded-3xl transform transition-all">
-          <div className="text-center mb-10">
+      <div className="min-h-screen bg-stone-50 flex flex-col font-sans selection:bg-rose-200">
+        <nav className="w-full px-8 py-8 flex justify-between items-center fixed top-0 z-50 bg-stone-50/80 backdrop-blur-md border-b border-stone-200/50">
+          <Link href={`/${locale}`} className="text-2xl tracking-widest font-light uppercase text-stone-900">
+            Yoga<span className="font-semibold text-rose-700"> x Chang</span>
+          </Link>
+          <Link href={`/${locale}`} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
+            {locale === 'vi' ? 'Quay lại' : 'Back'}
+          </Link>
+        </nav>
+
+        <main className="flex-grow flex items-center justify-center px-6 pt-32 pb-20">
+          <div className="max-w-md w-full bg-white p-10 rounded-[2rem] shadow-xl border border-stone-100">
             <h1 className="text-3xl font-light text-stone-900 mb-2">{t('title')}</h1>
-            <p className="text-sm text-stone-500">{t('subtitle')}</p>
+            <p className="text-sm text-stone-400 mb-8">{t('subtitle')}</p>
+
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-2">{t('guestId')}</label>
+                <input type="text" value={guestId} onChange={e => setGuestId(e.target.value)} required className="w-full border-b border-stone-300 py-2 text-stone-900 focus:outline-none focus:border-rose-700 bg-transparent transition-colors" />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-stone-400 mb-2">{t('pin')}</label>
+                <input type="password" value={pin} onChange={e => setPin(e.target.value)} required className="w-full border-b border-stone-300 py-2 text-stone-900 focus:outline-none focus:border-rose-700 bg-transparent tracking-widest transition-colors" />
+              </div>
+              <button type="submit" disabled={loginLoading} className="w-full py-4 mt-4 bg-rose-800 text-white rounded-full text-xs uppercase tracking-widest hover:bg-rose-900 disabled:opacity-50 transition-all shadow-md">
+                {loginLoading ? '...' : t('login')}
+              </button>
+            </form>
+
+            <div className="mt-10 pt-8 border-t border-stone-200/50 text-center">
+              <p className="text-xs text-stone-500 leading-relaxed mb-6">
+                {t('newCustomer')} <strong className="text-rose-700 font-semibold tracking-wider">{t('newGuestId')}</strong> & <strong className="text-rose-700 font-semibold tracking-wider">{t('newPin')}</strong> {t('asPin')}
+              </p>
+              <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-4">{t('contactAfter')}</p>
+              <img src="/qr-code.png" alt="Contact QR Code" className="w-32 h-32 mx-auto rounded-xl shadow-sm border border-stone-100 object-cover" />
+            </div>
           </div>
-          <form className="space-y-6" onSubmit={handleLogin}>
-            <div>
-              <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">{t('guestId')}</label>
-              <input type="text" value={guestId} onChange={(e) => setGuestId(e.target.value)} required className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none" placeholder="VD: CN001" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-stone-400 uppercase tracking-widest mb-2">{t('pin')}</label>
-              <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} maxLength={6} required className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none tracking-[0.5em]" placeholder="••••••" />
-            </div>
-            <button type="submit" disabled={loginLoading} className="w-full bg-stone-900 text-white py-4 rounded-full text-xs tracking-widest uppercase hover:bg-stone-800 hover:shadow-lg hover:-translate-y-0.5 transition-all mt-4 disabled:opacity-50">
-              {loginLoading ? '...' : t('login')}
-            </button>
-          </form>
-        </div>
+        </main>
       </div>
     );
   }
 
-  // ==========================================
-  // VIEW 2: DASHBOARD
-  // ==========================================
   return (
-    <div className="min-h-screen pb-20">
-      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),1.5rem)] pb-6 flex justify-between items-center border-b border-stone-200 bg-white/90 backdrop-blur-md sticky top-0 z-10 ios-header-fix">
-        <div className="text-xl tracking-widest font-light uppercase text-stone-900">Yoga<span className="font-semibold">Studio</span></div>
-        <button onClick={() => setLoggedInGuest(null)} className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900 transition-colors">
+    <div className="min-h-screen bg-stone-50 font-sans selection:bg-rose-200">
+      <nav className="w-full px-8 py-6 flex justify-between items-center bg-white border-b border-stone-200">
+        <div className="text-xl tracking-widest font-light uppercase text-stone-900">
+          Yoga<span className="font-semibold text-rose-700"> x Chang</span>
+        </div>
+        <button onClick={() => setLoggedInGuest(null)} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
           {dashboardT('logout')}
         </button>
       </nav>
 
-      <main className="max-w-3xl mx-auto px-6 mt-12">
-        <h1 className="text-4xl font-light text-stone-900 mb-2 italic">{dashboardT('welcome')}, {loggedInGuest.name}</h1>
-        <p className="text-stone-500 mb-10">{dashboardT('subtitle')}</p>
-
-        <div className="space-y-5">
-          {dashboardLoading ? (
-             <div className="p-10 text-center text-stone-400 animate-pulse">{dashboardT('loading')}</div>
-          ) : bookings.length === 0 ? (
-             <div className="p-10 text-center text-stone-400 border border-stone-200 border-dashed rounded-3xl">Bạn chưa có lịch tập nào.</div>
-          ) : bookings.map((b) => {
-            // FIX: Ensure classItem is safely extracted for UI rendering
-            const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
-            
-            return (
-            <div key={b.id} className="bg-white p-6 md:p-8 rounded-3xl border border-stone-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col md:flex-row md:justify-between md:items-center">
-              <div className="mb-6 md:mb-0">
-                <div className="flex items-center space-x-3 mb-3">
-                  <span className={`text-[10px] px-3 py-1.5 rounded-full uppercase tracking-widest font-bold ${b.status.includes('Pending') ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
-                    {b.status.includes('Pending') ? 'Pending' : b.status}
-                  </span>
-                </div>
-                <h3 className="text-xl font-medium text-stone-800">{dashboardT('classCode')}: {classItem?.description || "Custom"}</h3>
-                <p className="text-stone-500 mt-1">
-                  {new Date(b.booking_date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
-                  <span className="mx-2">•</span> 
-                  {b.status.includes('Pending') ? b.status.split(': ')[1] : extractTime(classItem)}
-                </p>
-              </div>
-              
-              <div className="flex space-x-3">
-                <button onClick={() => openReschedule(b)} disabled={b.status.includes('Pending')} className="px-6 py-3 text-xs border border-stone-200 rounded-full hover:bg-stone-50 uppercase tracking-widest disabled:opacity-30 disabled:hover:bg-transparent transition-colors">
-                  {dashboardT('reschedule')}
-                </button>
-                <button onClick={() => handleCancel(b.id)} className="px-6 py-3 text-xs text-red-400 border border-red-50 rounded-full hover:bg-red-50 uppercase tracking-widest transition-colors">
-                  {dashboardT('cancel')}
-                </button>
-              </div>
-            </div>
-          )})}
+      <main className="max-w-5xl mx-auto px-6 py-12 pb-32">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-12">
+          <div>
+            <h1 className="text-4xl font-light text-stone-900 mb-2">{dashboardT('welcome')}, {loggedInGuest.name}</h1>
+            <p className="text-stone-500">{dashboardT('subtitle')}</p>
+          </div>
+          <button 
+            onClick={openNewBookingModal} 
+            className="mt-6 md:mt-0 px-6 py-3 bg-rose-800 text-white rounded-full text-xs tracking-widest uppercase hover:bg-rose-900 transition-all shadow-md"
+          >
+            {dashboardT('bookNew') || 'Book New Session'}
+          </button>
         </div>
+
+        {dashboardLoading ? (
+          <div className="text-stone-400 animate-pulse">{dashboardT('loading')}</div>
+        ) : (
+          <div className="grid gap-4">
+            {bookings.length === 0 ? (
+              <div className="p-8 text-center text-stone-400 bg-white rounded-3xl border border-dashed border-stone-200">
+                Bạn chưa có lịch tập nào.
+              </div>
+            ) : (
+              bookings.map(b => {
+                const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+                const isCancelled = b.status?.includes('Cancelled');
+                const isPending = b.status?.includes('Pending');
+                const timeString = extractTime(classItem, b.status);
+
+                return (
+                  <div key={b.id} className={`flex flex-col md:flex-row md:items-center justify-between p-6 rounded-3xl border ${isCancelled ? 'bg-stone-50 border-stone-100 opacity-60' : 'bg-white border-stone-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all'}`}>
+                    <div className="mb-4 md:mb-0">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <span className={`text-[10px] px-3 py-1.5 rounded-full uppercase tracking-widest font-bold ${isPending ? 'bg-amber-50 text-amber-600' : isCancelled ? 'bg-stone-100 text-stone-500' : 'bg-emerald-50 text-emerald-600'}`}>
+                          {isPending ? (dashboardT('pending') || 'Pending') : b.status.split(':')[0]}
+                        </span>
+                      </div>
+                      <h3 className={`text-xl font-medium ${isCancelled ? 'line-through text-stone-400' : 'text-stone-800'}`}>
+                        {dashboardT('classCode')}: {classItem?.description || 'Custom'}
+                      </h3>
+                      <p className="text-stone-500 mt-1">
+                        {new Date(b.booking_date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}
+                        <span className="mx-2">•</span> 
+                        {timeString}
+                      </p>
+                    </div>
+                    
+                    {!isCancelled && (
+                      <div className="flex space-x-3">
+                        <button onClick={() => openRescheduleModal(b)} disabled={isPending} className="px-6 py-3 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors text-stone-900 disabled:opacity-30 disabled:hover:bg-transparent">
+                          {dashboardT('reschedule')}
+                        </button>
+                        <button onClick={() => handleCancelBooking(b.id)} className="px-6 py-3 text-xs text-rose-600 border border-rose-50 rounded-full hover:bg-rose-50 uppercase tracking-widest transition-colors">
+                          {dashboardT('cancel')}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </main>
 
-      {/* --- RESCHEDULE MODAL --- */}
+      {/* --- RESCHEDULE / NEW BOOKING MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
-            <h3 className="text-2xl font-light mb-2">Đổi lịch tập</h3>
-            <p className="text-sm text-stone-500 mb-8">Chỉ hiển thị các ca tập 1 tiếng đang trống.</p>
+            <h3 className="text-2xl font-light mb-2 text-stone-900">
+              {isNewBooking 
+                ? (locale === 'vi' ? 'Đặt Lịch Mới' : 'Book New Session') 
+                : (locale === 'vi' ? 'Đổi Lịch Tập' : 'Reschedule Session')}
+            </h3>
+            <p className="text-sm text-stone-500 mb-8">Chỉ hiển thị các ca tập đang trống trong lịch.</p>
             
             <div className="space-y-6 mb-10">
               <div>
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">1. Chọn Ngày</label>
-                <select className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900" value={selectedNewDate} onChange={(e) => { setSelectedNewDate(e.target.value); setSelectedNewTime(''); }}>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">1. Chọn Ngày</label>
+                <select className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 outline-none focus:border-rose-700" value={selectedNewDate} onChange={(e) => { setSelectedNewDate(e.target.value); setSelectedNewTime(''); }}>
                   <option value="">-- Chọn ngày / Select date --</option>
                   {next30Days.map(date => <option key={date} value={date}>{new Date(date).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' })}</option>)}
                 </select>
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">2. Chọn Giờ</label>
-                <select className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 disabled:opacity-50" value={selectedNewTime} onChange={(e) => setSelectedNewTime(e.target.value)} disabled={!selectedNewDate}>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-2">2. Chọn Giờ</label>
+                <select className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl text-stone-900 disabled:opacity-50 outline-none focus:border-rose-700" value={selectedNewTime} onChange={(e) => setSelectedNewTime(e.target.value)} disabled={!selectedNewDate}>
                   <option value="">-- Chọn giờ / Select time --</option>
                   {availableSlots.map(slot => <option key={slot} value={slot}>{slot} (1 tiếng)</option>)}
                 </select>
                 {selectedNewDate && availableSlots.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-2 italic">Ngày này đã kín lịch hoặc không có ca tập.</p>
+                  <p className="text-xs text-rose-600 mt-2 italic">Ngày này nghỉ hoặc đã qua giờ tập.</p>
                 )}
               </div>
             </div>
 
             <div className="flex space-x-3">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-4 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors">Hủy</button>
+              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-4 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors text-stone-900">Hủy</button>
               <button 
-                onClick={submitReschedule} 
-                disabled={!selectedNewDate || !selectedNewTime || rescheduleLoading}
-                className="flex-1 py-4 text-xs bg-stone-900 text-white rounded-full uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50 transition-colors shadow-md"
+                onClick={submitBookingModal} 
+                disabled={!selectedNewDate || !selectedNewTime || rescheduleLoading} 
+                className="flex-1 py-4 text-xs bg-rose-800 text-white rounded-full uppercase tracking-widest hover:bg-rose-900 disabled:opacity-50 transition-colors shadow-md"
               >
                 {rescheduleLoading ? '...' : 'Xác nhận'}
               </button>

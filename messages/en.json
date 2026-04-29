@@ -9,12 +9,21 @@
     "title": "Find Your Balance",
     "subtitle": "A minimal yoga space for focus and tranquility."
   },
+  "Quote": {
+    "text": "\"Yoga is a light, which once lit, will never dim. The better your practice, the brighter the flame.\"",
+    "author": "(B.K.S Iyengar)"
+  },
   "Booking": {
     "title": "Booking Portal",
     "subtitle": "Please enter your Guest ID and 6-digit PIN.",
     "guestId": "Guest ID",
     "pin": "6-Digit PIN",
-    "login": "Sign In"
+    "login": "Sign In",
+    "newCustomer": "New to the studio? Please enter",
+    "newGuestId": "CN000",
+    "newPin": "123456",
+    "asPin": "as your PIN to book your first session.",
+    "contactAfter": "Scan the QR code below to contact us after your first booking:"
   },
   "Dashboard": {
     "welcome": "Welcome",
@@ -24,57 +33,46 @@
     "cancel": "Cancel",
     "confirmCancel": "Are you sure you want to cancel this booking?",
     "logout": "Log Out",
-    "loading": "Loading your schedule..."
-  },
-  "Admin": {
-    "title": "Admin Dashboard",
-    "schedule": "Manage Schedule",
-    "totalBookings": "Total Bookings",
-    "pendingRequests": "pending requests",
-    "date": "Date / Time",
-    "student": "Student",
-    "classCode": "Class Code",
-    "status": "Status",
-    "action": "Action",
-    "approve": "Approve",
-    "approved": "Approved",
-    "loading": "Loading data..."
-  },
-  "Calendar": {
-    "title": "This Week's Schedule",
-    "subtitle": "Quickly view available slots and sync to your phone.",
-    "sync": "Sync to Apple Calendar",
-    "loading": "Loading calendar...",
-    "empty": "Empty",
-    "busy": "Busy",
-    "adminOn": "Exit Admin",
-    "adminOff": "Admin Access",
-    "loginTitle": "Admin Access",
-    "username": "Username",
-    "password": "Password",
-    "cancel": "Cancel",
-    "login": "Sign In",
-    "unknown": "Unknown"
+    "loading": "Loading your schedule...",
+    "bookNew": "Book New Session",
+    "pending": "Pending"
   },
   "About": {
     "title": "My Journey",
-    "subtitle": "Inspiring movement, fostering balance.",
-    "p1": "I am a dedicated yoga instructor with over 8 years of experience leading classes at top-tier yoga centers. My practice is built on the belief that yoga is a highly personal journey.",
+    "subtitle": "From corporate hospitality to mindful practice.",
+    "p1": "I am Chang. My approach to yoga is rooted in the belief that yoga is a highly personal journey.",
     "p2": "Before dedicating my life to yoga, I worked extensively in the hospitality and insurance industries. This background instilled in me a deep commitment to customer excellence, satisfaction, and personalized care.",
-    "p3": "Today, alongside my studio work, I offer exclusive private classes. My private clients—often busy professionals or individuals seeking focused improvement—come to me purely through word-of-mouth recommendations."
+    "p3": "Today, alongside my studio work, I offer exclusive private 1-on-1 classes (for female guests only). My private clients—often busy professionals or individuals seeking focused improvement—come to me purely through word-of-mouth recommendations."
   },
   "Testimonials": {
     "title": "Client Stories",
     "subtitle": "Experiences from my private students and studio partners.",
     "r1": "Her private sessions are a game-changer. Despite my chaotic work schedule, she customizes every hour to help me de-stress and build core strength.",
-    "a1": "Sarah M. (Private Client)",
+    "a1": "Private Client 1",
     "r2": "An absolute professional. Her background in customer service really shows in how she anticipates what her students need.",
-    "a2": "David L. (Private Client)",
+    "a2": "Private Client 2",
     "r3": "I've improved my alignment more in 3 months of private lessons than in 2 years of group classes.",
-    "a3": "Elena T. (Private Client)",
+    "a3": "Private Client 3",
     "r4": "Consistently one of the highest-rated instructors at our center. Her classes are always full, and her energy is unmatched.",
-    "a4": "CITIGYM Management",
+    "a4": "Citigym",
     "r5": "A reliable, deeply knowledgeable instructor who brings a premium, hospitality-level experience to our wellness programs.",
     "a5": "Estella Centre"
+  },
+  "Calendar": {
+    "title": "Lịch Tập / Schedule",
+    "subtitle": "Xem và đăng ký lịch tập Yoga 1 kèm 1",
+    "adminOn": "Admin Mode: ON",
+    "adminOff": "Admin Login",
+    "sync": "Sync to Mac",
+    "loading": "Loading your schedule...",
+    "unknown": "Unknown",
+    "busy": "Busy",
+    "empty": "No classes scheduled.",
+    "loginTitle": "Admin Authentication",
+    "username": "Username",
+    "password": "Password",
+    "cancel": "Cancel",
+    "login": "Login",
+    "book": "Book"
   }
 }

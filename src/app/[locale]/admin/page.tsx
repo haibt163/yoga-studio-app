@@ -28,9 +28,11 @@ export default function AdminPage() {
   }, [isAuthenticated, supabase]);
 
   async function fetchData() {
+    setLoading(true);
+    // Updated to fetch end_time from classes table
     const { data, error } = await supabase
       .from('bookings')
-      .select('id, name, guest_id, status, booking_date, classes(description, start_time)')
+      .select('id, name, guest_id, status, booking_date, classes(description, start_time, end_time)')
       .order('booking_date', { ascending: true });
     
     if (error) console.error("Admin Fetch Error:", error.message);
@@ -38,246 +40,270 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  // --- MATHEMATICAL COLLISION DETECTOR ---
-  useEffect(() => {
-    if (!selectedDate) {
-      setTakenSlots([]);
-      return;
-    }
-    async function checkCollisions() {
-      // Fetch all bookings for the target day
-      const { data } = await supabase
-        .from('bookings')
-        .select('id, status, classes(start_time)')
-        .eq('booking_date', selectedDate);
-
-      if (data) {
-        const blocked = data
-          .filter(b => {
-            // Only care about Confirmed statuses
-            const isConfirmed = b.status?.toLowerCase().includes('confirmed');
-            // Do NOT block the slot of the exact booking the Admin is currently moving
-            const isNotCurrentEdit = bookingToEdit ? b.id !== bookingToEdit.id : true;
-            return isConfirmed && isNotCurrentEdit;
-          })
-          .map(b => {
-            // If it's a custom time like "Confirmed: 17:45"
-            if (b.status.includes(':')) {
-              return b.status.split(':')[1].trim();
-            }
-            
-            // FIX: Safely handle classes as either an object or an array to satisfy TypeScript
-            const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
-            
-            // If it's a standard template time, safely extract it as a string
-            // E.g., "2026-05-03 17:45:00" -> "17:45"
-            if (classItem?.start_time) {
-              // Bypassing new Date() to prevent Safari/iOS 'Invalid Date' bugs
-              const timeStringMatch = classItem.start_time.match(/(\d{2}:\d{2})/);
-              if (timeStringMatch) {
-                return timeStringMatch[1];
-              }
-            }
-            return null;
-          })
-          .filter(Boolean) as string[];
-
-        setTakenSlots(blocked);
-      }
-    }
-    checkCollisions();
-  }, [selectedDate, bookingToEdit, supabase]);
-
-  // Generate 30-min interval slots from 06:00 to 19:00 for maximum flexibility
-  const allAvailableHours = useMemo(() => {
-    const slots = [];
-    for (let h = 6; h <= 19; h++) {
-      slots.push(`${String(h).padStart(2, '0')}:00`);
-      if (h < 19) slots.push(`${String(h).padStart(2, '0')}:30`);
-    }
-    return slots;
-  }, []);
-
-  // 2. Mathematical 60-Minute Overlap Filter
-  const validAdminSlots = allAvailableHours.filter(slot => {
-    const [h, m] = slot.split(':').map(Number);
-    const slotMins = h * 60 + m;
-
-    for (const taken of takenSlots) {
-      const [th, tm] = taken.split(':').map(Number);
-      const takenMins = th * 60 + tm;
-      
-      // Since classes are 1-hour max, if the time difference is less than 60 mins, it's an overlap.
-      // Now perfectly handles 17:45 vs 17:00 and 17:30
-      if (Math.abs(slotMins - takenMins) < 60) {
-        return false; 
-      }
-    }
-    return true;
-  });
-
-  // --- ACTIONS ---
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'Trang@123') setIsAuthenticated(true);
-    else alert('Sai thông tin đăng nhập');
+    // Default admin credentials
+    if (username === 'admin' && password === 'Trang@123') {
+      setIsAuthenticated(true);
+    } else {
+      alert('Sai thông tin / Invalid credentials');
+    }
   };
 
   const handleApprove = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus.replace('Pending', 'Confirmed');
-    const { error } = await supabase.from('bookings').update({ status: newStatus }).eq('id', id);
-    if (!error) setBookings(bookings.map(b => b.id === id ? { ...b, status: newStatus } : b));
+    let approvedTime = '00:00';
+    if (currentStatus.includes(':')) {
+      approvedTime = currentStatus.split(':')[1].trim();
+    }
+    await supabase.from('bookings').update({ status: `Confirmed: ${approvedTime}` }).eq('id', id);
+    fetchData();
   };
 
-  const handleCancel = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn hủy lịch này? (Thao tác này sẽ xóa dữ liệu)')) return;
-    const { error } = await supabase.from('bookings').delete().eq('id', id);
-    if (!error) setBookings(bookings.filter(b => b.id !== id));
+  const handleDecline = async (id: string) => {
+    if(confirm('Chắc chắn hủy yêu cầu này? / Are you sure?')) {
+      await supabase.from('bookings').update({ status: 'Cancelled' }).eq('id', id);
+      fetchData();
+    }
   };
 
-  const openReschedule = (booking: any) => {
+  const openRescheduleModal = async (booking: any) => {
     setBookingToEdit(booking);
     setSelectedDate('');
     setSelectedTime('');
+    
+    // Fetch globally taken slots (ignoring cancelled ones)
+    const { data } = await supabase.from('bookings').select('booking_date, status, classes(start_time)');
+    const taken = (data || [])
+      .filter(b => !b.status?.includes('Cancelled'))
+      .map(b => {
+        let time = '';
+        if (b.status?.includes(':')) {
+            time = b.status.split(':')[1].trim();
+        } else if (b.classes) {
+            const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+            const timeMatch = classItem?.start_time?.match(/(\d{2}:\d{2})/);
+            if (timeMatch) time = timeMatch[1];
+        }
+        return `${b.booking_date}_${time}`;
+      });
+      
+    setTakenSlots(taken);
     setIsModalOpen(true);
   };
 
   const submitReschedule = async () => {
-    if (!selectedDate || !selectedTime) return alert("Vui lòng chọn ngày và giờ mới.");
     setActionLoading(true);
-    
-    // Automatically flag as Confirmed since the Admin moved it
-    const newStatus = `Confirmed: ${selectedTime}`;
-
-    const { error } = await supabase.from('bookings')
-      .update({ booking_date: selectedDate, status: newStatus })
+    await supabase.from('bookings')
+      .update({ booking_date: selectedDate, status: `Confirmed: ${selectedTime}` })
       .eq('id', bookingToEdit.id);
-
-    if (!error) {
-      // Re-fetch everything to ensure deep consistency
-      fetchData();
-      setIsModalOpen(false);
-    } else {
-      alert('Lỗi cập nhật');
-    }
+    
+    setIsModalOpen(false);
     setActionLoading(false);
+    fetchData();
   };
 
-  // --- RENDER ---
+  // Generate 30 days for admin scheduler
+  const next30DaysAdmin = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  // Updated to use your strict Day-of-Week Rules
+  const validAdminSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    
+    const [y, m, d] = selectedDate.split('-');
+    const dayOfWeek = new Date(Number(y), Number(m)-1, Number(d)).getDay(); 
+    
+    let possibleSlots: string[] = [];
+    if (dayOfWeek === 1) possibleSlots = ["08:00", "09:00"];
+    else if (dayOfWeek === 2) possibleSlots = ["06:00", "07:00"];
+    else if (dayOfWeek === 4 || dayOfWeek === 6) possibleSlots = ["16:00"];
+    else if (dayOfWeek === 0) possibleSlots = ["09:30"];
+    
+    // Filter out taken slots, but DON'T filter past times for Admin
+    return possibleSlots.filter(slot => !takenSlots.includes(`${selectedDate}_${slot}`));
+  }, [selectedDate, takenSlots]);
+
+  // Helper function to extract time properly
+  const extractTime = (classesObj: any, statusStr: string) => {
+    if (statusStr?.includes(':')) return statusStr.split(':')[1].trim();
+    const data = Array.isArray(classesObj) ? classesObj[0] : classesObj;
+    if (!data?.start_time) return '';
+    const match = data.start_time.match(/(\d{2}:\d{2})/);
+    return match ? match[1] : '';
+  };
+
+  // --- RENDER LOGIN VIEW ---
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-sans px-6 bg-stone-50">
-        <div className="w-full max-w-sm bg-white p-10 rounded-3xl shadow-xl border border-stone-100">
-          <h1 className="text-2xl font-light tracking-widest text-center mb-8 uppercase text-stone-900">Studio<span className="font-semibold">Admin</span></h1>
-          <form onSubmit={handleAdminLogin} className="space-y-6">
-            <input type="text" value={username} onChange={e => setUsername(e.target.value)} className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent text-stone-900 appearance-none rounded-none" placeholder="Tài khoản" required />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border-b border-stone-300 py-2 focus:outline-none focus:border-stone-900 bg-transparent tracking-widest text-stone-900 appearance-none rounded-none" placeholder="Mật khẩu" required />
-            <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-full text-xs tracking-widest uppercase hover:bg-stone-800 transition-colors shadow-md mt-4">Đăng nhập</button>
-          </form>
-        </div>
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center font-sans selection:bg-rose-200">
+        <form onSubmit={handleLogin} className="bg-white p-10 rounded-[2rem] shadow-xl max-w-sm w-full mx-4 border border-stone-100">
+          <h1 className="text-2xl font-light mb-8 text-center uppercase tracking-widest text-stone-900">Admin Login</h1>
+          <input 
+            type="text" 
+            placeholder="Username" 
+            value={username} 
+            onChange={e => setUsername(e.target.value)} 
+            className="w-full border-b border-stone-300 py-3 mb-6 focus:outline-none focus:border-rose-700 bg-transparent text-stone-900" 
+          />
+          <input 
+            type="password" 
+            placeholder="Password" 
+            value={password} 
+            onChange={e => setPassword(e.target.value)} 
+            className="w-full border-b border-stone-300 py-3 mb-8 focus:outline-none focus:border-rose-700 bg-transparent text-stone-900 tracking-widest" 
+          />
+          <button 
+            type="submit" 
+            className="w-full bg-rose-800 text-white py-4 rounded-full uppercase tracking-widest text-xs hover:bg-rose-900 transition-colors shadow-md"
+          >
+            Đăng Nhập
+          </button>
+        </form>
       </div>
     );
   }
 
-  const pendingCount = bookings.filter(b => b.status.includes('Pending')).length;
+  const pendingCount = bookings.filter(b => b.status?.includes('Pending')).length;
 
-  // Helper for safe time extraction in UI
-  const extractTime = (timeStr: string | undefined) => {
-    if (!timeStr) return '';
-    const match = timeStr.match(/(\d{2}:\d{2})/);
-    return match ? match[1] : '';
-  };
-
+  // --- RENDER DASHBOARD VIEW ---
   return (
-    <div className="min-h-screen font-sans pb-20 bg-stone-50">
-      <nav className="w-full px-8 pt-[max(env(safe-area-inset-top),1.5rem)] pb-6 bg-white/90 backdrop-blur-md border-b border-stone-200 flex justify-between items-center mb-10 sticky top-0 z-10 ios-header-fix">
-        <div className="text-xl tracking-widest font-light uppercase text-stone-900">Studio<span className="font-semibold">Admin</span></div>
-        <button onClick={() => setIsAuthenticated(false)} className="text-xs uppercase tracking-widest text-stone-400 hover:text-stone-900">Đăng xuất</button>
+    <div className="min-h-screen bg-stone-50 font-sans selection:bg-rose-200">
+      <nav className="w-full px-8 py-6 bg-white border-b border-stone-200 flex justify-between items-center sticky top-0 z-40">
+        <div className="text-xl tracking-widest font-light uppercase text-stone-900">
+          Yoga<span className="font-semibold text-rose-700"> x Chang</span> 
+          <span className="text-xs text-stone-400 ml-2 tracking-normal uppercase">Admin</span>
+        </div>
+        <button 
+          onClick={() => setIsAuthenticated(false)} 
+          className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors"
+        >
+          Đăng Xuất
+        </button>
       </nav>
 
-      <main className="max-w-6xl mx-auto px-6">
-        <header className="mb-10">
-          <h1 className="text-4xl font-light text-stone-900 mb-2">Quản lý Lịch tập</h1>
-          <p className="text-stone-500">Tổng cộng {bookings.length} lượt đăng ký • <span className="text-amber-600 font-medium">{pendingCount} yêu cầu chờ duyệt</span></p>
-        </header>
+      <main className="max-w-6xl mx-auto px-6 py-12 pb-32">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-end mb-10">
+          <div>
+            <h1 className="text-4xl font-light text-stone-900 mb-2">Bảng Điều Khiển</h1>
+            <p className="text-stone-500">Quản lý Lịch tập</p>
+          </div>
+          <div className="mt-4 md:mt-0 text-left md:text-right">
+            <span className="text-xs uppercase tracking-widest text-stone-400 mr-4">Tổng cộng: {bookings.length}</span>
+            {pendingCount > 0 && (
+              <span className="text-xs font-bold uppercase tracking-widest text-rose-600 px-3 py-1 bg-rose-50 rounded-full border border-rose-100">
+                {pendingCount} chờ duyệt
+              </span>
+            )}
+          </div>
+        </div>
 
-        <div className="bg-white rounded-3xl shadow-lg shadow-stone-200/50 border border-stone-100 overflow-hidden overflow-x-auto">
+        <div className="bg-white rounded-3xl shadow-sm border border-stone-200 overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
-              <tr className="text-[10px] uppercase tracking-widest text-stone-400 border-b border-stone-100 bg-stone-50/50">
-                <th className="px-6 py-6">Ngày / Khung giờ</th>
-                <th className="px-6 py-6">Học viên</th>
-                <th className="px-6 py-6">Trạng thái</th>
-                <th className="px-6 py-6 text-right">Duyệt</th>
-                <th className="px-6 py-6 text-right">Quản lý</th>
+              <tr className="border-b border-stone-100 bg-stone-50/50">
+                <th className="p-4 pl-6 text-xs uppercase tracking-widest text-stone-400 font-medium">Ngày / Khung giờ</th>
+                <th className="p-4 text-xs uppercase tracking-widest text-stone-400 font-medium">Học Viên</th>
+                <th className="p-4 text-xs uppercase tracking-widest text-stone-400 font-medium">Lớp</th>
+                <th className="p-4 text-xs uppercase tracking-widest text-stone-400 font-medium">Trạng Thái</th>
+                <th className="p-4 pr-6 text-xs uppercase tracking-widest text-stone-400 font-medium">Hành Động</th>
               </tr>
             </thead>
-            <tbody className="text-sm">
-              {loading ? <tr><td colSpan={5} className="p-10 text-center text-stone-400">Đang tải...</td></tr> : bookings.map((b) => {
-                
-                // FIX: Apply the array check to the UI render loop as well
-                const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
-                
-                const isCustom = b.status.includes(':');
-                const displayStatus = isCustom ? b.status.split(':')[0].trim() : b.status;
-                const customTime = isCustom ? b.status.split(':')[1].trim() : null;
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="p-12 text-center text-stone-400 animate-pulse">Đang tải dữ liệu...</td>
+                </tr>
+              ) : (
+                bookings.map(b => {
+                  const isPending = b.status?.includes('Pending');
+                  const isCancelled = b.status?.includes('Cancelled');
+                  const classItem = Array.isArray(b.classes) ? b.classes[0] : b.classes;
+                  
+                  const timeDisplay = extractTime(classItem, b.status);
 
-                return (
-                  <tr key={b.id} className="border-b border-stone-50 hover:bg-stone-50/80 transition-colors">
-                    <td className="px-6 py-5">
-                      <span className="block font-medium text-stone-900">{b.booking_date}</span>
-                      <span className="text-xs text-stone-500">
-                        {customTime ? <span className="text-amber-600 font-medium">{customTime} (Custom)</span> : extractTime(classItem?.start_time)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className="block font-medium text-stone-900">{b.name}</span>
-                      <span className="text-xs text-stone-400">{b.guest_id} - Mã: {classItem?.description || 'N/A'}</span>
-                    </td>
-                    <td className="px-6 py-5">
-                       <span className={`px-3 py-1.5 rounded-full text-[10px] uppercase font-bold tracking-widest ${displayStatus === 'Pending' ? 'bg-amber-50 text-amber-600' : 'bg-green-50 text-green-600'}`}>
-                        {displayStatus}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 text-right">
-                      {displayStatus === 'Pending' ? (
-                        <button onClick={() => handleApprove(b.id, b.status)} className="px-5 py-2.5 bg-stone-900 text-white text-xs uppercase tracking-widest rounded-full hover:bg-stone-800 transition-all shadow-md">Duyệt</button>
-                      ) : <span className="text-xs text-stone-300 uppercase tracking-widest">Đã duyệt</span>}
-                    </td>
-                    <td className="px-6 py-5 text-right space-x-2">
-                      <button onClick={() => openReschedule(b)} className="px-4 py-2 border border-stone-200 text-xs text-stone-600 uppercase tracking-widest rounded-full hover:bg-stone-50 transition-colors">Đổi</button>
-                      <button onClick={() => handleCancel(b.id)} className="px-4 py-2 border border-red-100 text-xs text-red-500 uppercase tracking-widest rounded-full hover:bg-red-50 transition-colors">Hủy</button>
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr key={b.id} className={`border-b border-stone-50 transition-colors ${isPending ? 'bg-orange-50/30' : 'hover:bg-stone-50/50'}`}>
+                      <td className="p-4 pl-6 whitespace-nowrap">
+                        <span className={`block font-medium ${isCancelled ? 'line-through text-stone-400' : 'text-stone-900'}`}>
+                          {b.booking_date}
+                        </span>
+                        <span className="text-xs text-stone-500">{timeDisplay}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="block font-medium text-stone-900">{b.name}</span>
+                        <span className="text-[10px] uppercase tracking-widest text-stone-400">{b.guest_id}</span>
+                      </td>
+                      <td className="p-4 text-sm text-stone-600">{classItem?.description || 'Custom Lớp'}</td>
+                      <td className="p-4">
+                        <span className={`text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full 
+                          ${isPending ? 'bg-orange-100 text-orange-700' : 
+                            isCancelled ? 'bg-stone-100 text-stone-500' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {b.status?.split(':')[0]}
+                        </span>
+                      </td>
+                      <td className="p-4 pr-6 space-x-2 whitespace-nowrap">
+                        {isPending && (
+                          <button 
+                            onClick={() => handleApprove(b.id, b.status)} 
+                            className="text-xs bg-stone-900 text-white px-5 py-2.5 rounded-full hover:bg-stone-800 transition-colors shadow-sm"
+                          >
+                            Duyệt
+                          </button>
+                        )}
+                        {!isCancelled && (
+                          <>
+                            <button 
+                              onClick={() => openRescheduleModal(b)} 
+                              className="text-xs border border-stone-200 text-stone-600 px-5 py-2.5 rounded-full hover:bg-stone-50 transition-colors"
+                            >
+                              Đổi
+                            </button>
+                            <button 
+                              onClick={() => handleDecline(b.id)} 
+                              className="text-xs font-semibold text-rose-600 hover:text-rose-800 transition-colors px-3 py-2.5"
+                            >
+                              Hủy
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </main>
 
-      {/* --- ADMIN RESCHEDULE MODAL --- */}
+      {/* --- RESCHEDULE MODAL --- */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
-            <h3 className="text-2xl font-light mb-2">Đổi lịch (Admin)</h3>
-            <p className="text-sm text-stone-500 mb-8">Hệ thống đã tự động ẩn các giờ bị trùng (overlap 1 tiếng) với học viên khác.</p>
+            <h3 className="text-2xl font-light mb-8 text-stone-900">Admin Đổi Lịch</h3>
             
             <div className="space-y-6 mb-10">
               <div>
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">1. Chọn Ngày</label>
-                <input 
-                  type="date"
-                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-900 text-stone-900 appearance-none"
+                <label className="block text-[10px] uppercase tracking-widest text-stone-400 font-bold mb-2">1. Chọn Ngày Mới</label>
+                <select 
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-rose-700 transition-colors text-stone-900"
                   value={selectedDate}
                   onChange={(e) => { setSelectedDate(e.target.value); setSelectedTime(''); }}
-                />
+                >
+                  <option value="">-- Chọn ngày / Select date --</option>
+                  {next30DaysAdmin.map(date => <option key={date} value={date}>{date}</option>)}
+                </select>
               </div>
-
+              
               <div>
-                <label className="block text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-2">2. Chọn Giờ (06:00 - 19:00)</label>
+                <label className="block text-[10px] uppercase tracking-widest text-stone-400 font-bold mb-2">2. Chọn Giờ</label>
                 <select 
-                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-stone-900 transition-colors disabled:opacity-50 text-stone-900"
+                  className="w-full p-4 bg-stone-50 border border-stone-200 rounded-xl outline-none focus:border-rose-700 transition-colors disabled:opacity-50 text-stone-900"
                   value={selectedTime}
                   onChange={(e) => setSelectedTime(e.target.value)}
                   disabled={!selectedDate}
@@ -288,17 +314,22 @@ export default function AdminPage() {
                   ))}
                 </select>
                 {selectedDate && validAdminSlots.length === 0 && (
-                  <p className="text-xs text-amber-600 mt-2 italic">Ngày này đã hoàn toàn kín lịch.</p>
+                  <p className="text-xs text-rose-600 mt-2 italic">Ngày này nghỉ hoặc đã kín lịch.</p>
                 )}
               </div>
             </div>
 
             <div className="flex space-x-3">
-              <button onClick={() => setIsModalOpen(false)} className="flex-1 py-4 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors">Hủy</button>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="flex-1 py-4 text-xs border border-stone-200 rounded-full uppercase tracking-widest hover:bg-stone-50 transition-colors text-stone-900"
+              >
+                Hủy
+              </button>
               <button 
                 onClick={submitReschedule} 
                 disabled={!selectedDate || !selectedTime || actionLoading}
-                className="flex-1 py-4 text-xs bg-stone-900 text-white rounded-full uppercase tracking-widest hover:bg-stone-800 disabled:opacity-50 transition-colors shadow-md"
+                className="flex-1 py-4 text-xs bg-rose-800 text-white rounded-full uppercase tracking-widest hover:bg-rose-900 disabled:opacity-50 transition-colors shadow-md"
               >
                 {actionLoading ? '...' : 'Xác nhận Đổi'}
               </button>
