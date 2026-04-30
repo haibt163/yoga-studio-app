@@ -23,20 +23,42 @@ export default function AdminPage() {
   const [takenSlots, setTakenSlots] = useState<string[]>([]);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Helper function moved UP so it can be used during data fetching for sorting
+  const extractTime = (classesObj: any, statusStr: string) => {
+    if (statusStr?.includes(':')) return statusStr.split(':')[1].trim();
+    const data = Array.isArray(classesObj) ? classesObj[0] : classesObj;
+    if (!data?.start_time) return '23:59'; // Fallback to push unknown times to end of day
+    const match = data.start_time.match(/(\d{2}:\d{2})/);
+    return match ? match[1] : '23:59';
+  };
+
   useEffect(() => {
     if (isAuthenticated) fetchData();
   }, [isAuthenticated, supabase]);
 
   async function fetchData() {
     setLoading(true);
-    // Updated to fetch end_time from classes table
+    // Fetch data ordered primarily by date from Supabase
     const { data, error } = await supabase
       .from('bookings')
       .select('id, name, guest_id, status, booking_date, classes(description, start_time, end_time)')
       .order('booking_date', { ascending: true });
     
     if (error) console.error("Admin Fetch Error:", error.message);
-    setBookings(data || []);
+    
+    let fetchedData = data || [];
+
+    // Secondary Sort: Organize same-day bookings chronologically by time
+    fetchedData.sort((a, b) => {
+      if (a.booking_date === b.booking_date) {
+        const timeA = extractTime(a.classes, a.status);
+        const timeB = extractTime(b.classes, b.status);
+        return timeA.localeCompare(timeB);
+      }
+      return 0; // Keep the original Supabase date sorting for different days
+    });
+
+    setBookings(fetchedData);
     setLoading(false);
   }
 
@@ -127,15 +149,6 @@ export default function AdminPage() {
     // Filter out taken slots, but DON'T filter past times for Admin
     return possibleSlots.filter(slot => !takenSlots.includes(`${selectedDate}_${slot}`));
   }, [selectedDate, takenSlots]);
-
-  // Helper function to extract time properly
-  const extractTime = (classesObj: any, statusStr: string) => {
-    if (statusStr?.includes(':')) return statusStr.split(':')[1].trim();
-    const data = Array.isArray(classesObj) ? classesObj[0] : classesObj;
-    if (!data?.start_time) return '';
-    const match = data.start_time.match(/(\d{2}:\d{2})/);
-    return match ? match[1] : '';
-  };
 
   // --- RENDER LOGIN VIEW ---
   if (!isAuthenticated) {
