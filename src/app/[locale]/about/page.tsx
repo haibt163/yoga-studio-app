@@ -11,7 +11,7 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
         <div className="max-w-7xl mx-auto px-8 pt-[env(safe-area-inset-top,0px)]">
           <div className="flex justify-between items-center h-24">
             <Link href={`/${locale}`} className="text-2xl tracking-widest font-light uppercase">
-              Yoga<span className="font-semibold text-rose-700"> x Chang</span>
+              Yoga<span className="font-semibold text-rose-700"> with Chang</span>
             </Link>
             <Link href={`/${locale}`} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
               {locale === 'vi' ? 'Quay lại' : 'Back'}

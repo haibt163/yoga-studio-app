@@ -175,7 +175,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-stone-50 font-sans selection:bg-rose-200">
       <nav className="w-full px-8 py-6 bg-white border-b border-stone-200 flex justify-between items-center sticky top-0 z-40">
         <div className="text-xl tracking-widest font-light uppercase text-stone-900">
-          Yoga<span className="font-semibold text-rose-700"> x Chang</span> 
+          Yoga<span className="font-semibold text-rose-700"> with Chang</span> 
           <span className="text-xs text-stone-400 ml-2 tracking-normal uppercase">Admin</span>
         </div>
         <button 

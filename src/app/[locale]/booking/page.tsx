@@ -188,7 +188,7 @@ export default function BookingPage() {
       <div className="min-h-screen bg-stone-50 flex flex-col font-sans selection:bg-rose-200">
         <nav className="w-full px-8 py-8 flex justify-between items-center fixed top-0 z-50 bg-stone-50/80 backdrop-blur-md border-b border-stone-200/50">
           <Link href={`/${locale}`} className="text-2xl tracking-widest font-light uppercase text-stone-900">
-            Yoga<span className="font-semibold text-rose-700"> x Chang</span>
+            Yoga<span className="font-semibold text-rose-700"> with Chang</span>
           </Link>
           <Link href={`/${locale}`} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
             {locale === 'vi' ? 'Quay lại' : 'Back'}
@@ -219,7 +219,17 @@ export default function BookingPage() {
                 {t('newCustomer')} <strong className="text-rose-700 font-semibold tracking-wider">{t('newGuestId')}</strong> & <strong className="text-rose-700 font-semibold tracking-wider">{t('newPin')}</strong> {t('asPin')}
               </p>
               <p className="text-[10px] uppercase tracking-widest text-stone-400 mb-4">{t('contactAfter')}</p>
-              <img src="/qr-code.png" alt="Contact QR Code" className="w-32 h-32 mx-auto rounded-xl shadow-sm border border-stone-100 object-cover" />
+              
+              {/* --- ONLY THIS QR CODE SECTION WAS CHANGED --- */}
+              <div className="inline-block p-3 bg-white rounded-3xl border border-stone-100 shadow-sm mt-2">
+                <img 
+                  src="/qr-code.png" 
+                  alt="Contact QR Code" 
+                  className="w-40 h-40 mx-auto object-contain rounded-2xl" 
+                />
+              </div>
+              {/* --------------------------------------------- */}
+
             </div>
           </div>
         </main>
@@ -231,7 +241,7 @@ export default function BookingPage() {
     <div className="min-h-screen bg-stone-50 font-sans selection:bg-rose-200">
       <nav className="w-full px-8 py-6 flex justify-between items-center bg-white border-b border-stone-200">
         <div className="text-xl tracking-widest font-light uppercase text-stone-900">
-          Yoga<span className="font-semibold text-rose-700"> x Chang</span>
+          Yoga<span className="font-semibold text-rose-700"> with Chang</span>
         </div>
         <button onClick={() => setLoggedInGuest(null)} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
           {dashboardT('logout')}

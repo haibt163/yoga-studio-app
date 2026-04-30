@@ -23,7 +23,7 @@ export default async function LandingPage({ params }: PageProps) {
           
           {/* 1. Logo */}
           <div className="text-xl md:text-2xl tracking-widest font-light uppercase order-1">
-            Yoga<span className="font-semibold text-rose-700"> x Chang</span>
+            Yoga<span className="font-semibold text-rose-700"> with Chang</span>
           </div>
           
           {/* 2. Links */}
@@ -48,7 +48,7 @@ export default async function LandingPage({ params }: PageProps) {
       <main className="flex-grow flex flex-col items-center justify-center px-6 pt-56 pb-10 text-center relative overflow-hidden">
         <div className="max-w-4xl relative z-10 flex flex-col items-center">
           {/* Logo Addition */}
-          <img src="/logo.png" alt="Yoga x Chang Logo" className="w-24 h-24 mb-8 opacity-90 object-contain" />
+          <img src="/logo.png" alt="Yoga with Chang Logo" className="w-24 h-24 mb-8 opacity-90 object-contain" />
           
           <span className="text-xs uppercase tracking-[0.3em] text-rose-600 font-semibold mb-6 block">
             {locale === 'vi' ? 'Khám phá sự tĩnh tại' : 'Discover tranquility'}
@@ -83,7 +83,7 @@ export default async function LandingPage({ params }: PageProps) {
       </div>
 
       <footer className="w-full py-12 px-8 border-t border-stone-200/50 bg-stone-50 text-center text-xs text-stone-400 uppercase tracking-widest">
-        <p>© {new Date().getFullYear()} Yoga x Chang. {locale === 'vi' ? 'Mọi quyền được bảo lưu.' : 'All rights reserved.'}</p>
+        <p>© {new Date().getFullYear()} Yoga with Chang. {locale === 'vi' ? 'Mọi quyền được bảo lưu.' : 'All rights reserved.'}</p>
       </footer>
     </div>
   );

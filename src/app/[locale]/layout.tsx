@@ -3,6 +3,8 @@ import { getMessages } from 'next-intl/server';
 import { Be_Vietnam_Pro } from 'next/font/google';
 import type { Viewport, Metadata } from 'next';
 import '@/app/globals.css';
+// Step B Import:
+import MusicPlayer from '@/components/MusicPlayer';
 
 // FIX: We include the full range of weights (100-900).
 // Loading all weights ensures the browser always has the native glyphs for Vietnamese 
@@ -23,9 +25,9 @@ export const viewport: Viewport = {
   themeColor: '#fafaf9',
 };
 
-// Adds the home screen icon for iOS and search engine metadata
+// Updated title to "Yoga with Chang" per your request
 export const metadata: Metadata = {
-  title: 'Yoga x Chang',
+  title: 'Yoga with Chang',
   description: 'A minimal yoga space for focus and tranquility.',
   icons: {
     icon: '/logo.png',
@@ -44,13 +46,14 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
 
   return (
     <html lang={locale}>
-      {/* FIX: We use beVietnam.variable combined with the 'font-sans' class.
-          This ensures the font is correctly applied globally via Tailwind's 
-          configuration while maintaining the high-quality Vietnamese rendering.
-      */}
       <body className={`${beVietnam.variable} font-sans bg-stone-50 text-stone-900 antialiased selection:bg-rose-200 min-h-screen`}>
         <NextIntlClientProvider messages={messages}>
           {children}
+          {/* Step B: MusicPlayer added here. 
+              Placing it inside the Layout ensures the music 
+              persists even when the user clicks between links. 
+          */}
+          <MusicPlayer />
         </NextIntlClientProvider>
       </body>
     </html>
