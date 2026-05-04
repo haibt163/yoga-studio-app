@@ -133,18 +133,15 @@ export default function AdminPage() {
     return `${year}-${month}-${day}`;
   });
 
-  // Updated to use your strict Day-of-Week Rules
+  // Updated to use the new Mon-Sun universal schedule
   const validAdminSlots = useMemo(() => {
     if (!selectedDate) return [];
     
-    const [y, m, d] = selectedDate.split('-');
-    const dayOfWeek = new Date(Number(y), Number(m)-1, Number(d)).getDay(); 
-    
-    let possibleSlots: string[] = [];
-    if (dayOfWeek === 1) possibleSlots = ["08:00", "09:00"];
-    else if (dayOfWeek === 2) possibleSlots = ["06:00", "07:00"];
-    else if (dayOfWeek === 4 || dayOfWeek === 6) possibleSlots = ["16:00"];
-    else if (dayOfWeek === 0) possibleSlots = ["09:30"];
+    // Mon-Sun schedule: 6:00 AM - 12:00 PM and 4:00 PM - 7:00 PM (1 hour sessions)
+    const possibleSlots: string[] = [
+      "06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00",
+      "16:00", "17:00", "18:00", "19:00"
+    ];
     
     // Filter out taken slots, but DON'T filter past times for Admin
     return possibleSlots.filter(slot => !takenSlots.includes(`${selectedDate}_${slot}`));
