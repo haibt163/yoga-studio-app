@@ -1,39 +1,68 @@
-import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { buildPageMetadata } from '@/lib/metadata';
 
-export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
+interface PageProps {
+  params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === 'en' ? 'en' : 'vi';
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
+
+  return buildPageMetadata({
+    title: t('aboutTitle'),
+    description: t('aboutDescription'),
+    path: `/${locale}/about`,
+    locale,
+  });
+}
+
+export default async function AboutPage({ params }: PageProps) {
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === 'en' ? 'en' : 'vi';
   const t = await getTranslations();
 
   return (
-    <div className="min-h-screen bg-stone-50 font-sans text-stone-900 selection:bg-rose-200">
-      <nav className="w-full fixed top-0 left-0 right-0 z-[100] border-b border-stone-200/50 ios-header-fix">
-        <div className="max-w-7xl mx-auto px-8 pt-[env(safe-area-inset-top,0px)]">
-          <div className="flex justify-between items-center h-24">
-            <Link href={`/${locale}`} className="text-2xl tracking-widest font-light uppercase">
-              Yoga<span className="font-semibold text-rose-700"> with Chang</span>
+    <main className="mx-auto w-full max-w-5xl px-6 pb-20 pt-12 sm:pt-16">
+      <header className="mb-12">
+        <h1 className="mb-4 text-4xl font-light tracking-tight text-stone-900 sm:text-5xl">
+          {t('About.title')}
+        </h1>
+        <p className="text-lg italic text-stone-600">{t('About.subtitle')}</p>
+      </header>
+
+      <div className="grid gap-10 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div className="flex aspect-[4/5] items-center justify-center rounded-[2rem] border border-dashed border-stone-300 bg-stone-100 p-8 text-center">
+          <p className="max-w-[14rem] text-sm leading-relaxed text-stone-600">
+            {t('About.photoPlaceholder')}
+          </p>
+        </div>
+
+        <div className="space-y-6 text-base leading-relaxed text-stone-700 sm:text-lg">
+          <p>{t('About.p1')}</p>
+          <p>{t('About.p2')}</p>
+          <p className="rounded-3xl border border-stone-200 bg-white p-6 text-stone-700 shadow-sm">
+            {t('About.p3')}
+          </p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link
+              href={`/${locale}/booking`}
+              className="rounded-full bg-rose-800 px-6 py-3 text-xs font-semibold uppercase tracking-widest text-white transition-colors hover:bg-rose-900"
+            >
+              {t('Hero.cta')}
             </Link>
-            <Link href={`/${locale}`} className="text-xs uppercase tracking-widest text-stone-500 hover:text-rose-700 transition-colors">
-              {locale === 'vi' ? 'Quay lại' : 'Back'}
+            <Link
+              href={`/${locale}/testimonials`}
+              className="rounded-full border border-stone-300 bg-white px-6 py-3 text-xs font-semibold uppercase tracking-widest text-stone-700 transition-colors hover:border-rose-300 hover:text-rose-800"
+            >
+              {t('Navigation.testimonials')}
             </Link>
           </div>
         </div>
-      </nav>
-
-      <main className="max-w-3xl mx-auto px-6 pt-48 pb-20">
-        <header className="mb-16">
-          <h1 className="text-5xl font-light text-stone-900 mb-4 tracking-tight">{t('About.title')}</h1>
-          <p className="text-xl text-stone-400 font-light italic">{t('About.subtitle')}</p>
-        </header>
-
-        <div className="space-y-10 text-lg text-stone-600 font-light leading-relaxed">
-          <p>{t('About.p1')}</p>
-          <p>{t('About.p2')}</p>
-          <p className="p-8 bg-white border border-stone-100 rounded-3xl shadow-sm text-stone-800">
-            {t('About.p3')}
-          </p>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

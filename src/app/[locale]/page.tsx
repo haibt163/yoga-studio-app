@@ -1,90 +1,191 @@
-import { getTranslations } from 'next-intl/server';
+import Image from 'next/image';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { cleanEnv } from '@/lib/env';
+import { buildPageMetadata } from '@/lib/metadata';
 
 interface PageProps {
-  params: Promise<{ locale: string }>; 
+  params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === 'en' ? 'en' : 'vi';
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
+
+  return buildPageMetadata({
+    title: t('homeTitle'),
+    description: t('homeDescription'),
+    path: `/${locale}`,
+    locale,
+  });
 }
 
 export default async function LandingPage({ params }: PageProps) {
-  const { locale } = await params; 
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === 'en' ? 'en' : 'vi';
   const t = await getTranslations();
-  const toggleLang = locale === 'vi' ? 'en' : 'vi';
+  const contactLink = cleanEnv(process.env.NEXT_PUBLIC_CONTACT_LINK);
 
   return (
-    <div className="min-h-screen flex flex-col font-sans bg-stone-50 selection:bg-rose-200 text-stone-900">
-      
-      {/* BULLETPROOF IOS HEADER */}
-      <header className="fixed top-0 left-0 right-0 z-[100] bg-white/90 border-b border-stone-200/50 ios-glass">
-        {/* iOS Safe Area Spacer - natively pushes content down below the notch without breaking CSS math */}
-        <div className="w-full pt-[env(safe-area-inset-top,0px)]"></div>
-        
-        {/* Navigation Content - Fully responsive */}
-        <nav className="w-full max-w-7xl mx-auto px-6 py-4 flex flex-wrap justify-between items-center gap-y-4">
-          
-          {/* 1. Logo */}
-          <div className="text-xl md:text-2xl tracking-widest font-light uppercase order-1">
-            Yoga<span className="font-semibold text-rose-700"> with Chang</span>
-          </div>
-          
-          {/* 2. Links */}
-          <div className="w-full md:w-auto flex justify-center space-x-8 md:space-x-12 text-[10px] md:text-xs tracking-widest text-stone-500 uppercase font-medium order-3 md:order-2 border-t border-stone-200/50 md:border-none pt-4 md:pt-0">
-            <Link href={`/${locale}/about`} className="hover:text-rose-700 transition-colors">{t('Navigation.about')}</Link>
-            <Link href={`/${locale}/testimonials`} className="hover:text-rose-700 transition-colors">{t('Navigation.testimonials')}</Link>
-            <Link href={`/${locale}/calendar`} className="hover:text-rose-700 transition-colors">{t('Navigation.calendar')}</Link>
-          </div>
-
-          {/* 3. Actions */}
-          <div className="flex items-center space-x-4 md:space-x-6 order-2 md:order-3">
-            <Link href={`/${toggleLang}`} className="text-[10px] font-bold uppercase tracking-widest text-stone-400 hover:text-rose-700 transition-colors">
-              {locale === 'vi' ? 'EN' : 'VN'}
-            </Link>
-            <Link href={`/${locale}/booking`} className="text-[10px] font-bold border border-rose-200 px-4 md:px-6 py-2 md:py-3 rounded-full hover:bg-rose-800 hover:text-white hover:border-rose-800 transition-all uppercase tracking-widest shadow-sm text-rose-800">
-              {t('Navigation.booking')}
-            </Link>
-          </div>
-        </nav>
-      </header>
-
-      <main className="flex-grow flex flex-col items-center justify-center px-6 pt-56 pb-10 text-center relative overflow-hidden">
-        <div className="max-w-4xl relative z-10 flex flex-col items-center">
-          {/* Logo Addition */}
-          <img src="/logo.png" alt="Yoga with Chang Logo" className="w-24 h-24 mb-8 opacity-90 object-contain" />
-          
-          <span className="text-xs uppercase tracking-[0.3em] text-rose-600 font-semibold mb-6 block">
-            {locale === 'vi' ? 'Khám phá sự tĩnh tại' : 'Discover tranquility'}
-          </span>
-          <h1 className="text-6xl md:text-8xl font-light tracking-tighter mb-8 text-stone-900 leading-[1.1]">
-            {t('Hero.title')}
-          </h1>
-          <p className="text-lg md:text-xl text-stone-500 mb-12 font-light max-w-xl mx-auto leading-relaxed">
-            {t('Hero.subtitle')}
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <Link href={`/${locale}/booking`} className="px-8 py-4 bg-rose-800 text-white rounded-full text-xs uppercase tracking-widest hover:bg-rose-900 hover:-translate-y-0.5 transition-all shadow-md w-full sm:w-auto">
-              {locale === 'vi' ? 'Đặt lịch ngay' : 'Book a Session'}
-            </Link>
-            <Link href={`/${locale}/about`} className="px-8 py-4 bg-white border border-stone-200 text-stone-600 rounded-full text-xs uppercase tracking-widest hover:bg-rose-50 hover:text-rose-800 transition-all w-full sm:w-auto">
-              {locale === 'vi' ? 'Tìm hiểu thêm' : 'Learn More'}
-            </Link>
-          </div>
+    <main className="mx-auto flex w-full max-w-6xl flex-col px-6 pb-20 pt-12 sm:pt-16">
+      <section className="flex flex-col items-center text-center">
+        <Image
+          src="/logo.png"
+          alt="Yoga with Chang"
+          width={96}
+          height={96}
+          className="mb-8 h-24 w-24 object-contain"
+          priority
+        />
+        <span className="mb-5 block text-xs font-semibold uppercase tracking-[0.3em] text-rose-700">
+          {t('Hero.eyebrow')}
+        </span>
+        <h1 className="mb-6 text-5xl font-light leading-[1.08] tracking-tight text-stone-900 sm:text-6xl md:text-7xl">
+          {t('Hero.title')}
+        </h1>
+        <p className="mx-auto mb-10 max-w-xl text-base leading-relaxed text-stone-600 sm:text-lg">
+          {t('Hero.subtitle')}
+        </p>
+        <div className="flex w-full flex-col items-center gap-3 sm:w-auto sm:flex-row">
+          <Link
+            href={`/${locale}/booking`}
+            className="w-full rounded-full bg-rose-800 px-8 py-4 text-center text-xs font-semibold uppercase tracking-widest text-white shadow-md transition-colors hover:bg-rose-900 sm:w-auto"
+          >
+            {t('Hero.cta')}
+          </Link>
+          <Link
+            href={`/${locale}/about`}
+            className="w-full rounded-full border border-stone-300 bg-white px-8 py-4 text-center text-xs font-semibold uppercase tracking-widest text-stone-700 transition-colors hover:border-rose-300 hover:text-rose-800 sm:w-auto"
+          >
+            {t('Hero.learnMore')}
+          </Link>
         </div>
-      </main>
+      </section>
 
-      {/* B.K.S. Iyengar Quote Section */}
-      {/* FIX: Changed 'font-serif' to 'font-sans' to fix Vietnamese spacing */}
-      <div className="w-full max-w-3xl mx-auto px-6 py-20 text-center border-t border-stone-200/50">
-        <p className="text-xl md:text-2xl font-sans italic text-stone-600 mb-6 leading-relaxed">
+      <section className="mt-20 grid items-center gap-10 border-t border-stone-200/70 pt-16 md:grid-cols-2">
+        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-[2rem] border border-dashed border-stone-300 bg-stone-100 p-8 text-center">
+          <p className="max-w-[16rem] text-sm leading-relaxed text-stone-600">
+            {t('Home.photoPlaceholder')}
+          </p>
+        </div>
+        <div>
+          <h2 className="mb-5 text-3xl font-light text-stone-900 sm:text-4xl">
+            {t('Home.aboutTitle')}
+          </h2>
+          <p className="mb-4 leading-relaxed text-stone-700">{t('About.p1')}</p>
+          <p className="mb-6 leading-relaxed text-stone-700">{t('About.p3')}</p>
+          <Link
+            href={`/${locale}/about`}
+            className="text-sm font-semibold text-rose-800 underline-offset-4 hover:underline"
+          >
+            {t('Home.aboutCta')}
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-20 border-t border-stone-200/70 pt-16">
+        <h2 className="mb-10 text-3xl font-light text-stone-900 sm:text-4xl">
+          {t('Home.howTitle')}
+        </h2>
+        <ol className="grid gap-6 md:grid-cols-3">
+          {[
+            ['step1Title', 'step1Body'],
+            ['step2Title', 'step2Body'],
+            ['step3Title', 'step3Body'],
+          ].map(([titleKey, bodyKey], index) => (
+            <li key={titleKey} className="rounded-3xl border border-stone-200 bg-white p-6">
+              <span className="mb-4 flex h-9 w-9 items-center justify-center rounded-full bg-rose-50 text-sm font-semibold text-rose-800">
+                {index + 1}
+              </span>
+              <h3 className="mb-2 text-lg font-medium text-stone-900">
+                {t(`Home.${titleKey}`)}
+              </h3>
+              <p className="text-sm leading-relaxed text-stone-600">
+                {t(`Home.${bodyKey}`)}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="mt-20 grid gap-6 border-t border-stone-200/70 pt-16 md:grid-cols-2">
+        <div className="rounded-3xl bg-stone-900 p-8 text-stone-50">
+          <h2 className="mb-3 text-2xl font-light">{t('Home.pricingTitle')}</h2>
+          <p className="mb-6 text-sm leading-relaxed text-stone-300">
+            {t('Home.pricingBody')}
+          </p>
+          {contactLink ? (
+            <a
+              href={contactLink}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex rounded-full bg-white px-5 py-3 text-xs font-semibold uppercase tracking-widest text-stone-900 transition-colors hover:bg-rose-100"
+            >
+              {t('Home.contactCta')}
+            </a>
+          ) : (
+            <p className="text-xs text-stone-400">{t('Common.ownerInput')}</p>
+          )}
+        </div>
+        <div className="rounded-3xl border border-stone-200 bg-white p-8">
+          <h2 className="mb-5 text-2xl font-light text-stone-900">
+            {t('Home.testimonialsTitle')}
+          </h2>
+          <div className="space-y-4">
+            {[1, 2, 3].map((index) => (
+              <blockquote key={index} className="border-l-2 border-rose-200 pl-4">
+                <p className="text-sm italic leading-relaxed text-stone-700">
+                  “{t(`Testimonials.r${index}`)}”
+                </p>
+                <footer className="mt-1 text-xs uppercase tracking-widest text-stone-500">
+                  {t(`Testimonials.a${index}`)}
+                </footer>
+              </blockquote>
+            ))}
+          </div>
+          <Link
+            href={`/${locale}/testimonials`}
+            className="mt-6 inline-block text-sm font-semibold text-rose-800 underline-offset-4 hover:underline"
+          >
+            {t('Home.testimonialsCta')}
+          </Link>
+        </div>
+      </section>
+
+      <section className="mt-20 border-t border-stone-200/70 pt-16 text-center">
+        <p className="mx-auto mb-6 max-w-3xl text-xl italic leading-relaxed text-stone-700 sm:text-2xl">
           {t('Quote.text')}
         </p>
-        <p className="text-xs font-medium tracking-widest uppercase text-rose-700">
-          {t('Quote.author')} <br/><span className="mt-2 inline-block">Namaste 🙏</span>
+        <p className="mb-12 text-xs font-medium uppercase tracking-widest text-rose-700">
+          {t('Quote.author')}
         </p>
-      </div>
-
-      <footer className="w-full py-12 px-8 border-t border-stone-200/50 bg-stone-50 text-center text-xs text-stone-400 uppercase tracking-widest">
-        <p>© {new Date().getFullYear()} Yoga with Chang. {locale === 'vi' ? 'Mọi quyền được bảo lưu.' : 'All rights reserved.'}</p>
-      </footer>
-    </div>
+        <h2 className="mb-3 text-3xl font-light text-stone-900 sm:text-4xl">
+          {t('Home.finalCtaTitle')}
+        </h2>
+        <p className="mx-auto mb-8 max-w-xl leading-relaxed text-stone-600">
+          {t('Home.finalCtaBody')}
+        </p>
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href={`/${locale}/booking`}
+            className="w-full rounded-full bg-rose-800 px-8 py-4 text-center text-xs font-semibold uppercase tracking-widest text-white shadow-md transition-colors hover:bg-rose-900 sm:w-auto"
+          >
+            {t('Home.bookCta')}
+          </Link>
+          {contactLink && (
+            <a
+              href={contactLink}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full rounded-full border border-stone-300 bg-white px-8 py-4 text-center text-xs font-semibold uppercase tracking-widest text-stone-700 transition-colors hover:border-rose-300 hover:text-rose-800 sm:w-auto"
+            >
+              {t('Home.contactCta')}
+            </a>
+          )}
+        </div>
+      </section>
+    </main>
   );
 }

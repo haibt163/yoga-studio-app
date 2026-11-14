@@ -1,67 +1,82 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
+import { useSyncExternalStore } from 'react';
+import { useTranslations } from 'next-intl';
+
+const MUSIC_KEY = 'yoga_music_enabled';
+const MUSIC_EVENT = 'yoga-music-change';
+
+function subscribe(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener(MUSIC_EVENT, callback);
+
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(MUSIC_EVENT, callback);
+  };
+}
+
+function getSnapshot(): boolean {
+  try {
+    return window.sessionStorage.getItem(MUSIC_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function getServerSnapshot(): boolean {
+  return false;
+}
 
 export default function MusicPlayer() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const t = useTranslations('Music');
+  const enabled = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  // Auto-play on the user's first interaction with the website
-  useEffect(() => {
-    const handleFirstClick = () => {
-      if (!hasInteracted) {
-        setHasInteracted(true);
-        setIsPlaying(true);
-        // Command YouTube iframe to play
-        iframeRef.current?.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
-      }
-    };
+  function toggleMusic() {
+    const next = !enabled;
 
-    window.addEventListener('click', handleFirstClick, { once: true });
-    return () => window.removeEventListener('click', handleFirstClick);
-  }, [hasInteracted]);
-
-  const toggleMusic = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevents triggering the global click listener
-    if (isPlaying) {
-      iframeRef.current?.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
-    } else {
-      iframeRef.current?.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+    try {
+      window.sessionStorage.setItem(MUSIC_KEY, String(next));
+    } catch {
+      return;
     }
-    setIsPlaying(!isPlaying);
-    setHasInteracted(true);
-  };
+
+    window.dispatchEvent(new Event(MUSIC_EVENT));
+  }
 
   return (
-    <div className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[9999] pointer-events-none flex flex-col items-center">
-      
-      {/* Hidden YouTube Iframe */}
-      <iframe
-        ref={iframeRef}
-        src="https://www.youtube.com/embed/A-MQOHpdorQ?enablejsapi=1&loop=1&playlist=A-MQOHpdorQ"
-        allow="autoplay"
-        className="absolute w-0 h-0 opacity-0 pointer-events-none"
-        tabIndex={-1}
-      />
+    <div className="relative inline-flex">
+      {enabled && (
+        <iframe
+          src="https://www.youtube.com/embed/A-MQOHpdorQ?enablejsapi=1&loop=1&playlist=A-MQOHpdorQ&autoplay=1"
+          title={t('label')}
+          allow="autoplay"
+          tabIndex={-1}
+          aria-hidden="true"
+          className="pointer-events-none absolute h-0 w-0 opacity-0"
+        />
+      )}
 
-      {/* Floating Real-Photo Button */}
-      <button 
-        onClick={toggleMusic} 
-        /* Slightly larger button (w-16 h-16) so the beautiful real photo is clear */
-        className={`pointer-events-auto w-16 h-16 rounded-full flex items-center justify-center transition-all duration-700 ease-in-out hover:-translate-y-1 shadow-2xl ${isPlaying ? 'shadow-rose-300/60 scale-105' : 'opacity-70 grayscale-[20%] scale-100'}`}
-        aria-label="Toggle Background Music"
+      <button
+        type="button"
+        onClick={toggleMusic}
+        aria-pressed={enabled}
+        aria-label={enabled ? t('on') : t('off')}
+        className="flex items-center gap-2 rounded-full border border-stone-200 bg-white/95 px-3 py-2 shadow-xl backdrop-blur transition-colors hover:border-rose-300"
       >
-        {/* This wraps your real photo in a circular frame. 
-          When playing, it spins very slowly like a record player. 
-        */}
-        <div className={`w-full h-full rounded-full overflow-hidden border-[3px] bg-white ${isPlaying ? 'border-rose-200' : 'border-stone-200'} transition-colors duration-500`}>
-          <img 
-            src="/lotus.jpg" 
-            alt="Music Player Lotus" 
-            className={`w-full h-full object-cover ${isPlaying ? 'animate-[spin_10s_linear_infinite]' : 'transition-transform duration-700'}`}
-          />
-        </div>
+        <Image
+          src="/lotus.jpg"
+          alt=""
+          width={36}
+          height={36}
+          className={`h-9 w-9 rounded-full object-cover ${
+            enabled ? 'animate-[spin_10s_linear_infinite]' : ''
+          }`}
+        />
+        <span className="pr-1 text-xs font-semibold uppercase tracking-widest text-stone-700">
+          {enabled ? t('on') : t('off')}
+        </span>
       </button>
     </div>
   );

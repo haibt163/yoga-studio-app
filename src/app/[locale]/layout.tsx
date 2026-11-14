@@ -1,17 +1,15 @@
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages } from 'next-intl/server';
+import { getMessages, getTranslations } from 'next-intl/server';
 import { Be_Vietnam_Pro } from 'next/font/google';
-import type { Viewport, Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import '@/app/globals.css';
-// Step B Import:
-import MusicPlayer from '@/components/MusicPlayer';
+import Footer from '@/components/Footer';
+import Header from '@/components/Header';
+import { verifyAdminSession } from '@/lib/admin/session';
 
-// FIX: We include the full range of weights (100-900).
-// Loading all weights ensures the browser always has the native glyphs for Vietnamese 
-// diacritics, preventing the "broken" spacing seen when weights are synthesized.
-const beVietnam = Be_Vietnam_Pro({ 
+const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
-  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  weight: ['300', '400', '500', '600'],
   variable: '--font-be-vietnam',
   display: 'swap',
 });
@@ -19,41 +17,68 @@ const beVietnam = Be_Vietnam_Pro({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: 'cover',
   themeColor: '#fafaf9',
 };
 
-// Updated title to "Yoga with Chang" per your request
-export const metadata: Metadata = {
-  title: 'Yoga with Chang',
-  description: 'A minimal yoga space for focus and tranquility.',
-  icons: {
-    icon: '/logo.png',
-    apple: '/logo.png',
-  }
-};
-
 interface LayoutProps {
   children: React.ReactNode;
-  params: Promise<{ locale: string }>; 
+  params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: LayoutProps): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === 'en' ? 'en' : 'vi';
+  const t = await getTranslations({ locale, namespace: 'Metadata' });
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://changyoga.vercel.app';
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: t('homeTitle'),
+    description: t('homeDescription'),
+    alternates: {
+      canonical: `/${locale}`,
+      languages: {
+        vi: '/vi',
+        en: '/en',
+      },
+    },
+    openGraph: {
+      title: t('homeTitle'),
+      description: t('homeDescription'),
+      url: `/${locale}`,
+      siteName: 'Yoga with Chang',
+      locale: locale === 'vi' ? 'vi_VN' : 'en_US',
+      type: 'website',
+      images: [
+        {
+          url: '/logo.png',
+          width: 512,
+          height: 512,
+          alt: t('ogAlt'),
+        },
+      ],
+    },
+    icons: {
+      icon: '/logo.png',
+      apple: '/logo.png',
+    },
+  };
 }
 
 export default async function LocaleLayout({ children, params }: LayoutProps) {
-  const { locale } = await params; 
-  const messages = await getMessages();
+  const { locale: rawLocale } = await params;
+  const locale = rawLocale === 'en' ? 'en' : 'vi';
+  const messages = await getMessages({ locale });
+  const isAdmin = await verifyAdminSession();
 
   return (
     <html lang={locale}>
-      <body className={`${beVietnam.variable} font-sans bg-stone-50 text-stone-900 antialiased selection:bg-rose-200 min-h-screen`}>
+      <body className={`${beVietnam.variable} flex min-h-screen flex-col bg-stone-50 font-sans text-stone-900 antialiased selection:bg-rose-200`}>
         <NextIntlClientProvider messages={messages}>
-          {children}
-          {/* Step B: MusicPlayer added here. 
-              Placing it inside the Layout ensures the music 
-              persists even when the user clicks between links. 
-          */}
-          <MusicPlayer />
+          <Header locale={locale} isAdmin={isAdmin} />
+          <div className="flex-1">{children}</div>
+          <Footer locale={locale} />
         </NextIntlClientProvider>
       </body>
     </html>
