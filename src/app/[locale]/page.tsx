@@ -65,10 +65,14 @@ export default async function LandingPage({ params }: PageProps) {
       </section>
 
       <section className="mt-20 grid items-center gap-10 border-t border-stone-200/70 pt-16 md:grid-cols-2">
-        <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-[2rem] border border-dashed border-stone-300 bg-stone-100 p-8 text-center">
-          <p className="max-w-[16rem] text-sm leading-relaxed text-stone-600">
-            {t('Home.photoPlaceholder')}
-          </p>
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-stone-200 bg-stone-100">
+          <Image
+            src="/chang.jpg"
+            alt={t('Home.photoAlt')}
+            fill
+            sizes="(min-width: 768px) 50vw, 100vw"
+            className="object-cover"
+          />
         </div>
         <div>
           <h2 className="mb-5 text-3xl font-light text-stone-900 sm:text-4xl">
