@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import type { Metadata } from 'next';
@@ -35,10 +36,14 @@ export default async function AboutPage({ params }: PageProps) {
       </header>
 
       <div className="grid gap-10 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <div className="flex aspect-[4/5] items-center justify-center rounded-[2rem] border border-dashed border-stone-300 bg-stone-100 p-8 text-center">
-          <p className="max-w-[14rem] text-sm leading-relaxed text-stone-600">
-            {t('About.photoPlaceholder')}
-          </p>
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-stone-200 bg-stone-100">
+          <Image
+            src="/chang.jpg"
+            alt={t('About.photoAlt')}
+            fill
+            sizes="(min-width: 768px) 40vw, 100vw"
+            className="object-cover"
+          />
         </div>
 
         <div className="space-y-6 text-base leading-relaxed text-stone-700 sm:text-lg">

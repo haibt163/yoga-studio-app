@@ -223,7 +223,7 @@ export default function GuestLogin({
             {t('contactCta')}
           </p>
           <Image
-            src="/qr-code.png"
+            src="/qr-code.jpg"
             alt={t('contactCta')}
             width={160}
             height={160}
