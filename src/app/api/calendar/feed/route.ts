@@ -1,76 +1,91 @@
+import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createServerSupabase } from '@/lib/supabase/server';
+import { getStudioDateString } from '@/lib/studio-date';
+
+interface RawClass {
+  class_id: string | number;
+  start_time: string | null;
+  end_time: string | null;
+}
 
 const formatICSDate = (date: Date) => {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 };
 
 export async function GET() {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; 
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return new NextResponse('Server Configuration Error', { status: 500 });
-    }
+  const supabase = createServerSupabase();
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Fetch classes and guests separately to avoid PGRST200
-    const { data: classData, error: classError } = await supabase
+  if (!supabase) {
+    return new NextResponse('Calendar feed is not configured', { status: 503 });
+  }
+
+  try {
+    const today = getStudioDateString();
+    const { data, error } = await supabase
       .from('classes')
-      .select('*')
+      .select('class_id, start_time, end_time')
       .gte('start_time', today)
       .order('start_time', { ascending: true });
 
-    const { data: guestData, error: guestError } = await supabase
-      .from('guests')
-      .select('guest_id, name');
-
-    if (classError || guestError) {
-      throw classError || guestError;
+    if (error) {
+      throw error;
     }
 
-    const guestMap = new Map(guestData?.map(g => [g.guest_id.trim(), g.name]));
-    
-    const safeClasses = (classData || []).map(cls => ({
-      ...cls,
-      guests: { name: guestMap.get(cls.guest_id?.trim()) || 'Unknown' }
-    }));
+    const classes = (data ?? []) as unknown as RawClass[];
+    const now = new Date();
 
-    // ADDED: Auto-refresh instructions for Mac/iOS Calendar (15 Minute TTL)
-    let icsString = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'PRODID:-//Yoga x Chang//Calendar//VI',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-      'X-PUBLISHED-TTL:PT15M',
-      'REFRESH-INTERVAL;VALUE=DURATION:PT15M'
-    ].join('\r\n') + '\r\n';
+    let icsString =
+      [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Yoga x Chang//Calendar//VI',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'X-WR-CALNAME:Yoga with Chang',
+        'X-PUBLISHED-TTL:PT15M',
+        'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+      ].join('\r\n') + '\r\n';
 
-    safeClasses.forEach((cls) => {
+    classes.forEach((cls) => {
+      if (!cls.class_id || !cls.start_time || !cls.end_time) {
+        return;
+      }
+
       const startDate = new Date(cls.start_time);
       const endDate = new Date(cls.end_time);
-      const now = new Date();
 
-      icsString += [
-        'BEGIN:VEVENT',
-        `UID:class_${cls.class_id}@yogastudio.com`,
-        `DTSTAMP:${formatICSDate(now)}`,
-        `DTSTART:${formatICSDate(startDate)}`,
-        `DTEND:${formatICSDate(endDate)}`,
-        `SUMMARY:Yoga: ${cls.description} (${cls.guests?.name})`,
-        `DESCRIPTION:Mã lớp: ${cls.description}\\nHọc viên: ${cls.guests?.name}\\nID: ${cls.guest_id}`,
-        'STATUS:CONFIRMED',
-        'BEGIN:VALARM',
-        'TRIGGER:-PT2H',
-        'ACTION:DISPLAY',
-        'DESCRIPTION:Reminder: Upcoming Yoga Session',
-        'END:VALARM',
-        'END:VEVENT'
-      ].join('\r\n') + '\r\n';
+      if (
+        Number.isNaN(startDate.getTime()) ||
+        Number.isNaN(endDate.getTime())
+      ) {
+        return;
+      }
+
+      const eventId = createHash('sha256')
+        .update(String(cls.class_id))
+        .digest('hex')
+        .slice(0, 16);
+
+      // This feed is public. It intentionally contains no guest names, guest
+      // IDs, booking IDs, or free-text class details.
+      icsString +=
+        [
+          'BEGIN:VEVENT',
+          `UID:${eventId}@yogastudio.com`,
+          `DTSTAMP:${formatICSDate(now)}`,
+          `DTSTART:${formatICSDate(startDate)}`,
+          `DTEND:${formatICSDate(endDate)}`,
+          'SUMMARY:Yoga class',
+          'DESCRIPTION:Yoga session',
+          'STATUS:CONFIRMED',
+          'BEGIN:VALARM',
+          'TRIGGER:-PT2H',
+          'ACTION:DISPLAY',
+          'DESCRIPTION:Reminder: Upcoming Yoga Session',
+          'END:VALARM',
+          'END:VEVENT',
+        ].join('\r\n') + '\r\n';
     });
 
     icsString += 'END:VCALENDAR';
@@ -79,12 +94,14 @@ export async function GET() {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
         'Content-Disposition': 'attachment; filename="yoga_schedule.ics"',
-        'Cache-Control': 'no-cache, no-store, must-revalidate', 
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     });
-
-  } catch (err: any) {
-    console.error('Calendar Feed Error:', err);
+  } catch (error: unknown) {
+    console.error(
+      'Calendar Feed Error:',
+      error instanceof Error ? error.message : 'Unknown error'
+    );
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
