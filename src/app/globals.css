@@ -3,19 +3,14 @@
 :root {
   --background: #fafaf9; /* Stone 50 */
   --foreground: #1c1917; /* Stone 900 */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1c1917;
-    --foreground: #fafaf9;
-  }
+  --focus-ring: #9f1239; /* Rose 800 */
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -55,4 +50,31 @@ body {
 i, .italic {
   font-style: italic;
   font-synthesis: none; /* Stops the browser from "faking" italics */
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--focus-ring) !important;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

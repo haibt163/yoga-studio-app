@@ -10,6 +10,7 @@ import {
   verifyAdminSession,
 } from '@/lib/admin/session';
 import { createServerSupabase } from '@/lib/supabase/server';
+import { extractTime, type ClassRef } from '@/lib/bookings';
 import type { ActionResult, LoginState } from '@/lib/admin/action-types';
 
 function normalizeLocale(value: FormDataEntryValue | null): 'vi' | 'en' {
@@ -105,9 +106,28 @@ export async function declineBookingAction(id: unknown): Promise<ActionResult> {
     return { ok: false, error: 'not-configured' };
   }
 
+  const { data: booking, error: bookingError } = await supabase
+    .from('bookings')
+    .select('status, classes(start_time)')
+    .eq('id', id)
+    .maybeSingle<{
+      status?: string | null;
+      classes?: ClassRef | ClassRef[] | null;
+    }>();
+
+  if (bookingError) {
+    console.error('Booking decline lookup failed:', bookingError.message);
+    return { ok: false, error: 'database' };
+  }
+
+  if (!booking) {
+    return { ok: false, error: 'invalid' };
+  }
+
+  const time = extractTime(booking.classes, booking.status ?? '');
   const { error } = await supabase
     .from('bookings')
-    .update({ status: 'Cancelled' })
+    .update({ status: `Cancelled${time ? `: ${time}` : ''}` })
     .eq('id', id);
 
   if (error) {

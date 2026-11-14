@@ -18,7 +18,7 @@ interface RawCalendarBooking {
 
 export interface CalendarData {
   classes: CalendarClass[];
-  error: string | null;
+  error: 'not-configured' | 'database' | null;
 }
 
 export async function getCalendarClasses(
@@ -31,8 +31,7 @@ export async function getCalendarClasses(
   if (!supabase) {
     return {
       classes: [],
-      error:
-        'Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.',
+      error: 'not-configured',
     };
   }
 
@@ -49,7 +48,7 @@ export async function getCalendarClasses(
 
   if (error) {
     console.error('Calendar fetch failed:', error.message);
-    return { classes: [], error: 'Could not load the calendar.' };
+    return { classes: [], error: 'database' };
   }
 
   const rows = ((data ?? []) as unknown as RawCalendarBooking[]).filter((row) => {

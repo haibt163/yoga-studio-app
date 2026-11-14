@@ -1,19 +1,39 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { cleanEnv } from '@/lib/env';
+import { isVisibleOnCalendar } from '@/lib/bookings';
 import { createServerSupabase } from '@/lib/supabase/server';
 import { getStudioDateString } from '@/lib/studio-date';
 
 interface RawClass {
-  class_id: string | number;
-  start_time: string | null;
-  end_time: string | null;
+  description?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+}
+
+interface RawBooking {
+  id: string | number;
+  name?: string | null;
+  guest_id?: string | null;
+  status?: string | null;
+  booking_date?: string | null;
+  classes?: RawClass | RawClass[] | null;
 }
 
 const formatICSDate = (date: Date) => {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 };
 
-export async function GET() {
+const escapeICS = (value: string) =>
+  value.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
+
+function tokensMatch(provided: string, expected: string): boolean {
+  const providedHash = createHash('sha256').update(provided).digest();
+  const expectedHash = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(providedHash, expectedHash);
+}
+
+export async function GET(request: Request) {
   const supabase = createServerSupabase();
 
   if (!supabase) {
@@ -21,18 +41,26 @@ export async function GET() {
   }
 
   try {
+    const expectedToken = cleanEnv(process.env.CALENDAR_FEED_TOKEN);
+    const providedToken = new URL(request.url).searchParams.get('token') ?? '';
+    const isPrivileged = Boolean(
+      expectedToken && providedToken && tokensMatch(providedToken, expectedToken)
+    );
+
     const today = getStudioDateString();
     const { data, error } = await supabase
-      .from('classes')
-      .select('class_id, start_time, end_time')
-      .gte('start_time', today)
-      .order('start_time', { ascending: true });
+      .from('bookings')
+      .select('id, name, guest_id, status, booking_date, classes(description, start_time, end_time)')
+      .gte('booking_date', today)
+      .order('booking_date', { ascending: true });
 
     if (error) {
       throw error;
     }
 
-    const classes = (data ?? []) as unknown as RawClass[];
+    const bookings = ((data ?? []) as unknown as RawBooking[]).filter((booking) =>
+      isVisibleOnCalendar(booking.status ?? '')
+    );
     const now = new Date();
 
     let icsString =
@@ -47,13 +75,24 @@ export async function GET() {
         'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
       ].join('\r\n') + '\r\n';
 
-    classes.forEach((cls) => {
-      if (!cls.class_id || !cls.start_time || !cls.end_time) {
+    bookings.forEach((booking) => {
+      const classItem = Array.isArray(booking.classes)
+        ? booking.classes[0]
+        : booking.classes;
+      const statusTime = booking.status?.match(/(\d{2}:\d{2})/)?.[1];
+      const classTime = classItem?.start_time?.match(/(\d{2}:\d{2})/)?.[1];
+      const time = statusTime ?? classTime;
+
+      if (!booking.booking_date || !time) {
         return;
       }
 
-      const startDate = new Date(cls.start_time);
-      const endDate = new Date(cls.end_time);
+      const startDate = classItem?.start_time
+        ? new Date(classItem.start_time)
+        : new Date(`${booking.booking_date}T${time}:00+07:00`);
+      const endDate = classItem?.end_time
+        ? new Date(classItem.end_time)
+        : new Date(startDate.getTime() + 60 * 60 * 1000);
 
       if (
         Number.isNaN(startDate.getTime()) ||
@@ -63,12 +102,17 @@ export async function GET() {
       }
 
       const eventId = createHash('sha256')
-        .update(String(cls.class_id))
+        .update(String(booking.id))
         .digest('hex')
         .slice(0, 16);
 
-      // This feed is public. It intentionally contains no guest names, guest
-      // IDs, booking IDs, or free-text class details.
+      const summary = isPrivileged
+        ? `Yoga: ${classItem?.description ?? 'Private session'} (${booking.name ?? 'Guest'})`
+        : 'Yoga class';
+      const description = isPrivileged
+        ? `Học viên: ${booking.name ?? 'Guest'}\nMã lớp: ${classItem?.description ?? ''}\nID: ${booking.guest_id ?? ''}`
+        : 'Yoga session';
+
       icsString +=
         [
           'BEGIN:VEVENT',
@@ -76,8 +120,8 @@ export async function GET() {
           `DTSTAMP:${formatICSDate(now)}`,
           `DTSTART:${formatICSDate(startDate)}`,
           `DTEND:${formatICSDate(endDate)}`,
-          'SUMMARY:Yoga class',
-          'DESCRIPTION:Yoga session',
+          `SUMMARY:${escapeICS(summary)}`,
+          `DESCRIPTION:${escapeICS(description)}`,
           'STATUS:CONFIRMED',
           'BEGIN:VALARM',
           'TRIGGER:-PT2H',
@@ -94,7 +138,8 @@ export async function GET() {
       headers: {
         'Content-Type': 'text/calendar; charset=utf-8',
         'Content-Disposition': 'attachment; filename="yoga_schedule.ics"',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'private, no-store, max-age=0',
+        'X-Robots-Tag': 'noindex, nofollow',
       },
     });
   } catch (error: unknown) {

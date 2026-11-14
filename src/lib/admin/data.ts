@@ -18,7 +18,7 @@ interface RawBooking {
 
 export interface AdminBookingsResult {
   bookings: AdminBooking[];
-  error: string | null;
+  error: 'not-configured' | 'database' | null;
 }
 
 export async function getAdminBookings(): Promise<AdminBookingsResult> {
@@ -27,8 +27,7 @@ export async function getAdminBookings(): Promise<AdminBookingsResult> {
   if (!supabase) {
     return {
       bookings: [],
-      error:
-        'Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.',
+      error: 'not-configured',
     };
   }
 
@@ -39,7 +38,7 @@ export async function getAdminBookings(): Promise<AdminBookingsResult> {
 
   if (error) {
     console.error('Admin bookings fetch failed:', error.message);
-    return { bookings: [], error: 'Could not load bookings.' };
+    return { bookings: [], error: 'database' };
   }
 
   const bookings = ((data ?? []) as unknown as RawBooking[]).map((row) => ({

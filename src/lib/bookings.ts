@@ -12,6 +12,13 @@ export interface AdminBooking {
   classes: ClassRef | ClassRef[] | null;
 }
 
+export interface GuestBooking {
+  id: string;
+  status: string;
+  bookingDate: string;
+  classes: ClassRef | ClassRef[] | null;
+}
+
 export interface CalendarClass {
   id: string;
   date: string;
