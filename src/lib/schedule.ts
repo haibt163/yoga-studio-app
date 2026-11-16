@@ -10,6 +10,16 @@ export const GUEST_SLOTS_BY_WEEKDAY: Record<number, string[]> = {
   6: ['16:00'],
 };
 
+export const TEMPORARY_GUEST_SLOTS_BY_WEEKDAY: Record<number, string[]> = {
+  0: ['16:00', '17:45'],
+  2: ['09:30', '17:30'],
+  4: ['06:30', '07:50', '17:30'],
+  5: ['09:10'],
+};
+
+export const RELEASE_START = '2026-11-16';
+export const RELEASE_END = '2027-02-28';
+
 export const ADMIN_SLOTS = [
   '06:00',
   '07:00',
@@ -29,7 +39,17 @@ export function getSlots(mode: ScheduleMode, date: string): string[] {
     return ADMIN_SLOTS;
   }
 
-  return GUEST_SLOTS_BY_WEEKDAY[getWeekday(date)] ?? [];
+  const baseSlots = GUEST_SLOTS_BY_WEEKDAY[getWeekday(date)] ?? [];
+
+  if (date < RELEASE_START || date > RELEASE_END) {
+    return baseSlots;
+  }
+
+  const extraSlots = TEMPORARY_GUEST_SLOTS_BY_WEEKDAY[getWeekday(date)] ?? [];
+
+  return [...new Set([...baseSlots, ...extraSlots])].sort((a, b) =>
+    a.localeCompare(b)
+  );
 }
 
 export function getNextDays(
