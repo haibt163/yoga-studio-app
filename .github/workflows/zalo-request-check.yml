@@ -1,0 +1,25 @@
+name: Temporary Zalo request verification
+
+on:
+  push:
+    branches:
+      - fix/mobile-zalo-request-panel
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_CONTACT_LINK: "https://zalo.me/123456789"
