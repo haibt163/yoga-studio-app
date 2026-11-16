@@ -62,7 +62,7 @@ export default function GuestLogin({
   const [requestCopyStatus, setRequestCopyStatus] = useState<'copied' | 'failed' | null>(
     null
   );
-  const requestPanelRef = useRef<HTMLSectionElement | null>(null);
+  const requestPanelRef = useRef<HTMLDivElement | null>(null);
   const requestMessageRef = useRef<HTMLTextAreaElement | null>(null);
   const contactLink = cleanEnv(process.env.NEXT_PUBLIC_CONTACT_LINK);
 
@@ -303,7 +303,7 @@ export default function GuestLogin({
         </form>
 
         {showZaloPanel && (
-          <section
+          <div
             ref={requestPanelRef}
             aria-labelledby="zalo-request-title"
             className="mt-6 scroll-mt-6 rounded-2xl border border-rose-200 bg-rose-50/50 p-4 sm:p-5"
@@ -353,7 +353,7 @@ export default function GuestLogin({
             >
               {t('requestOpenZalo')}
             </a>
-          </section>
+          </div>
         )}
 
         <div className="mt-8 hidden border-t border-stone-200 pt-6 md:block">
