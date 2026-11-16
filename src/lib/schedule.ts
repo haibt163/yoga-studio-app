@@ -13,7 +13,7 @@ export const GUEST_SLOTS_BY_WEEKDAY: Record<number, string[]> = {
 export const TEMPORARY_GUEST_SLOTS_BY_WEEKDAY: Record<number, string[]> = {
   0: ['16:00', '17:45'],
   2: ['09:30', '17:30'],
-  4: ['06:30', '07:50'],
+  4: ['06:30', '07:50', '17:30'],
   5: ['09:10'],
 };
 
