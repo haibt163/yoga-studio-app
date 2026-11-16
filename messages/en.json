@@ -102,7 +102,7 @@
     "requestTime": "Preferred time",
     "requestTimePlaceholder": "e.g. Tuesday morning",
     "requestSubmit": "Send request",
-    "requestNote": "This opens your chat app; nothing is stored here.",
+    "requestNote": "After submitting, copy the message and open Zalo. Nothing is stored on this page.",
     "requestMissingContact": "Contact link is not configured. Add NEXT_PUBLIC_CONTACT_LINK.",
     "requestMessageIntro": "Hello Chang, I would like to book my first session.",
     "contactCta": "Message Chang",
@@ -139,8 +139,14 @@
     "errorUnauthorized": "Your session expired. Please sign in again.",
     "errorInvalid": "The request is invalid.",
     "requestCopied": "Your request details have been copied. Paste them into the Zalo chat and send the message.",
-    "requestCopyFailed": "Zalo opened, but automatic copying was blocked. Select the message below and copy it into the chat.",
-    "requestCopyButton": "Copy request details"
+    "requestCopyFailed": "Automatic copying did not work. Press and hold the message above, then choose Copy.",
+    "requestCopyButton": "Copy message",
+    "requestPanelTitle": "Your message is ready",
+    "requestMessageLabel": "Message to send in Zalo",
+    "requestCopiedButton": "Copied",
+    "requestInstructions": "1. Copy the message. 2. Open Zalo, paste it and press Send.",
+    "requestManualCopyNote": "If copying does not work, press and hold the message above, then choose Copy.",
+    "requestOpenZalo": "Open Zalo"
   },
   "Calendar": {
     "title": "Schedule",

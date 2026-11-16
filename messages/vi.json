@@ -102,7 +102,7 @@
     "requestTime": "Thời gian mong muốn",
     "requestTimePlaceholder": "Ví dụ: sáng thứ 3",
     "requestSubmit": "Gửi yêu cầu",
-    "requestNote": "Thao tác này sẽ mở ứng dụng nhắn tin; thông tin không được lưu trên trang.",
+    "requestNote": "Sau khi gửi yêu cầu, hãy sao chép tin nhắn rồi mở Zalo. Thông tin không được lưu trên trang này.",
     "requestMissingContact": "Liên kết liên hệ chưa được cấu hình. Vui lòng thêm NEXT_PUBLIC_CONTACT_LINK.",
     "requestMessageIntro": "Xin chào Chang, mình muốn đặt buổi tập đầu tiên.",
     "contactCta": "Nhắn tin cho Chang",
@@ -139,8 +139,14 @@
     "errorUnauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
     "errorInvalid": "Dữ liệu không hợp lệ.",
     "requestCopied": "Thông tin yêu cầu đã được sao chép. Vui lòng dán vào cuộc trò chuyện Zalo và gửi tin nhắn.",
-    "requestCopyFailed": "Đã mở Zalo nhưng trình duyệt không cho phép sao chép tự động. Vui lòng chọn và sao chép nội dung bên dưới vào cuộc trò chuyện.",
-    "requestCopyButton": "Sao chép nội dung yêu cầu"
+    "requestCopyFailed": "Không sao chép tự động được. Hãy nhấn giữ tin nhắn ở trên rồi chọn Sao chép.",
+    "requestCopyButton": "Sao chép tin nhắn",
+    "requestPanelTitle": "Tin nhắn của bạn đã sẵn sàng",
+    "requestMessageLabel": "Tin nhắn gửi cho Chang qua Zalo",
+    "requestCopiedButton": "Đã sao chép",
+    "requestInstructions": "1. Sao chép tin nhắn. 2. Mở Zalo, dán nội dung và nhấn Gửi.",
+    "requestManualCopyNote": "Nếu không sao chép được, hãy nhấn giữ tin nhắn ở trên rồi chọn Sao chép.",
+    "requestOpenZalo": "Mở Zalo"
   },
   "Calendar": {
     "title": "Lịch Tập",
