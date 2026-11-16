@@ -137,7 +137,10 @@
     "errorGeneric": "Could not reach the server. Please try again.",
     "errorSlotTaken": "That time was just booked. Please choose another time.",
     "errorUnauthorized": "Your session expired. Please sign in again.",
-    "errorInvalid": "The request is invalid."
+    "errorInvalid": "The request is invalid.",
+    "requestCopied": "Your request details have been copied. Paste them into the Zalo chat and send the message.",
+    "requestCopyFailed": "Zalo opened, but automatic copying was blocked. Select the message below and copy it into the chat.",
+    "requestCopyButton": "Copy request details"
   },
   "Calendar": {
     "title": "Schedule",
