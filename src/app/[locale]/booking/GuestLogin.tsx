@@ -62,7 +62,7 @@ export default function GuestLogin({
   const [requestCopyStatus, setRequestCopyStatus] = useState<'copied' | 'failed' | null>(
     null
   );
-  const requestPanelRef = useRef<HTMLElement | null>(null);
+  const requestPanelRef = useRef<HTMLSectionElement | null>(null);
   const requestMessageRef = useRef<HTMLTextAreaElement | null>(null);
   const contactLink = cleanEnv(process.env.NEXT_PUBLIC_CONTACT_LINK);
 
@@ -139,7 +139,7 @@ export default function GuestLogin({
       `${t('requestName')}: ${requestName.trim()}`,
       `${t('requestPhone')}: ${requestPhone.trim()}`,
       `${t('requestTime')}: ${requestTime.trim()}`,
-    ].join('\\n');
+    ].join('\n');
 
     if (isZaloContactLink(contactLink)) {
       setRequestMessage(message);
