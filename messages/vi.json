@@ -137,7 +137,10 @@
     "errorGeneric": "Không thể kết nối tới máy chủ. Vui lòng thử lại.",
     "errorSlotTaken": "Khung giờ này vừa được đặt. Vui lòng chọn giờ khác.",
     "errorUnauthorized": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-    "errorInvalid": "Dữ liệu không hợp lệ."
+    "errorInvalid": "Dữ liệu không hợp lệ.",
+    "requestCopied": "Thông tin yêu cầu đã được sao chép. Vui lòng dán vào cuộc trò chuyện Zalo và gửi tin nhắn.",
+    "requestCopyFailed": "Đã mở Zalo nhưng trình duyệt không cho phép sao chép tự động. Vui lòng chọn và sao chép nội dung bên dưới vào cuộc trò chuyện.",
+    "requestCopyButton": "Sao chép nội dung yêu cầu"
   },
   "Calendar": {
     "title": "Lịch Tập",
