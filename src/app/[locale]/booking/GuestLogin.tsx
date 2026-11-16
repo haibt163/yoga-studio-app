@@ -88,7 +88,7 @@ export default function GuestLogin({
       `${t('requestName')}: ${requestName.trim()}`,
       `${t('requestPhone')}: ${requestPhone.trim()}`,
       `${t('requestTime')}: ${requestTime.trim()}`,
-    ].join('\\n');
+    ].join('\n');
 
     if (isZaloContactLink(contactLink)) {
       setRequestMessage(message);
